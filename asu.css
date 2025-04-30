@@ -183,3 +183,21 @@ h2 {
 .carousel-dots button.active {
     opacity: 1;
 }
+/* Hero title & tagline */
+.hero-title {
+    text-align: center;
+    margin: 40px auto 20px;
+}
+.hero-title h1 {
+    font-size: 3rem;                   /* big & bold */
+    text-transform: uppercase;         /* ASU all-caps */
+    letter-spacing: 0.1em;             /* breathing room */
+    color: var(--primary-color);
+    margin-bottom: 0.5em;
+}
+.hero-title .tagline {
+    font-size: 1.25rem;
+    color: var(--accent-color);
+    font-style: italic;
+    margin: 0;
+}

@@ -11,8 +11,7 @@ const photos = [
 
 
 const events = [
-    { id:1, name:'Spring Mixer', date:'2025-05-15', price:500 },
-    { id:2, name:'Cultural Night', date:'2025-06-10', price:750 }
+    { id:1, name:'Spring 2025 Gala', date:'Friday, May 5th', price:1500 }
 ];
 
 let idx = 0;
