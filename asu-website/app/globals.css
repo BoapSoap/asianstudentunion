@@ -1,0 +1,105 @@
+:root {
+  --primary-color: #b71c1c;
+  --accent-color: #ffd700;
+  --font-stack: "Roboto", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  font-family: var(--font-stack);
+  color: #333;
+  min-height: 100dvh;
+}
+
+body {
+  background:
+          linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)),
+          url("/resources/backdrop.webp") center/cover no-repeat fixed;
+  background-color: #0a0a0a;
+}
+
+.navbar {
+  background: rgba(183,28,28,.95);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+  backdrop-filter: blur(6px) saturate(1.2);
+}
+
+.navbar h1 {
+  color: var(--accent-color);
+  font-size: 1.3rem;
+  margin-right: auto;
+}
+
+.nav-list {
+  list-style: none;
+  display: flex;
+}
+
+.nav-list li {
+  margin-left: 20px;
+}
+
+.nav-list a {
+  color: var(--accent-color);
+  text-decoration: none;
+  font-weight: bold;
+  padding: 5px 8px;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.nav-list a:hover {
+  background: var(--accent-color);
+  color: var(--primary-color);
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+  display: block;
+}
+
+.brand-title {
+  color: var(--accent-color);
+  text-decoration: none;
+}
+
+.brand-title:hover {
+  text-decoration: underline;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* FIXED SPLASH ANIMATION */
+@keyframes asuSplash {
+  0% {
+    opacity: 1;              /* immediately black, no flicker */
+    letter-spacing: 0.05em;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;              /* cinematic spread */
+    letter-spacing: 0.24em;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;              /* fade out so site shows */
+    letter-spacing: 0.30em;
+    transform: scale(1);
+  }
+}
