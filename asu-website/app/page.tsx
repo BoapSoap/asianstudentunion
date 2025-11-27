@@ -175,22 +175,6 @@ export default async function HomePage() {
                             </Typography>
                             <Typography sx={{ mb: 2 }}>{featured.location}</Typography>
 
-                            {/* TEMP DEBUG: show what featured.slug actually is */}
-                            <pre
-                                style={{
-                                    color: "white",
-                                    fontSize: 12,
-                                    opacity: 0.8,
-                                    marginBottom: 12,
-                                }}
-                            >
-                                {JSON.stringify(
-                                    { slug: featured.slug, link: featured.link },
-                                    null,
-                                    2
-                                )}
-                            </pre>
-
                             {/* Learn More should ALWAYS go to the detail page if slug exists */}
                             {typeof featured.slug === "string" &&
                                 featured.slug.trim() !== "" && (
