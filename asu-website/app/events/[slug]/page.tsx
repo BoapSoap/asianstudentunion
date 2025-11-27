@@ -9,8 +9,8 @@ import {
     Chip,
     Stack,
 } from "@mui/material";
-import { groq } from "next-sanity";
 import { client } from "../../../sanity/lib/client";
+import { singleEventQuery, allEventsQuery } from "../../../sanity/lib/queries";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -27,21 +27,6 @@ type Event = {
     imageUrl?: string;
     description?: any[];
 };
-
-const eventBySlugQuery = (slug: string) => groq`
-  *[_type == "event" && slug.current == "${slug}"][0]{
-    _id,
-    title,
-    "slug": slug.current,
-    date,
-    time,
-    location,
-    link,
-    featured,
-    "imageUrl": image.asset->url,
-    description
-  }
-`;
 
 function formatEventDate(dateStr?: string) {
     if (!dateStr) return "";
@@ -73,20 +58,16 @@ function Description({ blocks }: { blocks?: any[] }) {
     );
 }
 
+// NOTE: in Next 16, params is a Promise and must be awaited
 export default async function EventPage({
                                             params,
                                         }: {
-    params: { slug: string };
+    params: Promise<{ slug: string }>;
 }) {
-    const { slug } = params;
+    const { slug } = await params;
 
-    const event = await client.fetch<Event | null>(
-        eventBySlugQuery(slug),
-        {},
-        { cache: "no-store" }
-    );
-
-    if (!event) {
+    // Simple safety check
+    if (!slug || typeof slug !== "string" || slug.trim() === "") {
         return (
             <Box
                 sx={{
@@ -98,16 +79,55 @@ export default async function EventPage({
                     color: "white",
                 }}
             >
-                <Typography>No event found for this slug.</Typography>
+                <Typography>Invalid event slug.</Typography>
             </Box>
         );
     }
 
-    const primaryCtaHref =
-        event.link && event.link.trim() !== "" ? event.link : "/#events";
+    // Fetch the single event by slug PLUS all events for debug
+    const [event, allEvents] = await Promise.all([
+        client.fetch<Event | null>(singleEventQuery, { slug }),
+        client.fetch<Event[]>(allEventsQuery, {}, { cache: "no-store" }),
+    ]);
 
-    const primaryCtaLabel =
-        event.link && event.link.trim() !== "" ? "Sign Up" : "Back to Events";
+    if (!event) {
+        // Debug view so we can see what slugs exist in Sanity
+        const availableSlugs = allEvents.map((e) => e.slug);
+        return (
+            <Box
+                sx={{
+                    minHeight: "100vh",
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    color: "white",
+                    p: 4,
+                }}
+            >
+                <Box sx={{ maxWidth: 800 }}>
+                    <Typography variant="h5" sx={{ mb: 2 }}>
+                        No event found for slug: <code>{slug}</code>
+                    </Typography>
+                    <Typography sx={{ mb: 1 }}>
+                        Available event slugs from Sanity:
+                    </Typography>
+                    <pre
+                        style={{
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                            fontSize: 12,
+                        }}
+                    >
+                        {JSON.stringify(availableSlugs, null, 2)}
+                    </pre>
+                </Box>
+            </Box>
+        );
+    }
+
+    const hasExternalLink =
+        typeof event.link === "string" && event.link.trim() !== "";
 
     return (
         <Box
@@ -187,6 +207,7 @@ export default async function EventPage({
                             )}
                         </Box>
 
+                        {/* Back to Events (top-right) */}
                         <Box sx={{ display: { xs: "none", md: "flex" }, gap: 1 }}>
                             <Button
                                 href="/#events"
@@ -217,19 +238,21 @@ export default async function EventPage({
                             gap: 2,
                         }}
                     >
-                        <Button
-                            href={primaryCtaHref}
-                            sx={{
-                                backgroundColor: "var(--accent-color)",
-                                color: "var(--primary-color)",
-                                fontWeight: 700,
-                                textTransform: "none",
-                                px: 3,
-                                "&:hover": { backgroundColor: "#ffdc55" },
-                            }}
-                        >
-                            {primaryCtaLabel}
-                        </Button>
+                        {hasExternalLink && (
+                            <Button
+                                href={event.link as string}
+                                sx={{
+                                    backgroundColor: "var(--accent-color)",
+                                    color: "var(--primary-color)",
+                                    fontWeight: 700,
+                                    textTransform: "none",
+                                    px: 3,
+                                    "&:hover": { backgroundColor: "#ffdc55" },
+                                }}
+                            >
+                                Sign Up
+                            </Button>
+                        )}
                     </Box>
                 </CardContent>
             </Card>

@@ -175,23 +175,38 @@ export default async function HomePage() {
                             </Typography>
                             <Typography sx={{ mb: 2 }}>{featured.location}</Typography>
 
-                            <Button
-                                href={
-                                    featured.slug
-                                        ? `/events/${featured.slug}`
-                                        : featured.link && featured.link.trim() !== ""
-                                            ? featured.link
-                                            : "/#events"
-                                }
-                                sx={{
-                                    backgroundColor: "var(--accent-color)",
-                                    color: "var(--primary-color)",
-                                    fontWeight: 700,
-                                    "&:hover": { backgroundColor: "#ffdc55" },
+                            {/* TEMP DEBUG: show what featured.slug actually is */}
+                            <pre
+                                style={{
+                                    color: "white",
+                                    fontSize: 12,
+                                    opacity: 0.8,
+                                    marginBottom: 12,
                                 }}
                             >
-                                Learn More
-                            </Button>
+                                {JSON.stringify(
+                                    { slug: featured.slug, link: featured.link },
+                                    null,
+                                    2
+                                )}
+                            </pre>
+
+                            {/* Learn More should ALWAYS go to the detail page if slug exists */}
+                            {typeof featured.slug === "string" &&
+                                featured.slug.trim() !== "" && (
+                                    <Button
+                                        href={`/events/${featured.slug}`}
+                                        sx={{
+                                            backgroundColor: "var(--accent-color)",
+                                            color: "var(--primary-color)",
+                                            fontWeight: 700,
+                                            textTransform: "none",
+                                            "&:hover": { backgroundColor: "#ffdc55" },
+                                        }}
+                                    >
+                                        Learn More
+                                    </Button>
+                                )}
                         </CardContent>
                     </Card>
                 </Box>
