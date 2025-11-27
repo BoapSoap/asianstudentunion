@@ -10,6 +10,9 @@ import { SocialIcon } from "react-social-icons";
 import { client } from "../../sanity/lib/client";
 import { officersQuery } from "../../sanity/lib/queries";
 
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
+
 type Officer = {
     _id: string;
     name: string;
@@ -24,7 +27,11 @@ type Officer = {
 };
 
 export default async function OfficersPage() {
-    const officers = await client.fetch<Officer[]>(officersQuery);
+    const officers = await client.fetch<Officer[]>(
+        officersQuery,
+        {},
+        { cache: "no-store" }
+    );
 
     return (
         <Box
@@ -37,12 +44,7 @@ export default async function OfficersPage() {
                 mb: 10,
             }}
         >
-            <Box
-                sx={{
-                    width: "90%",
-                    maxWidth: "1100px",
-                }}
-            >
+            <Box sx={{ width: "90%", maxWidth: "1100px" }}>
                 <Typography
                     variant="h3"
                     sx={{
@@ -85,7 +87,7 @@ export default async function OfficersPage() {
                             gridTemplateColumns: {
                                 xs: "minmax(0, 320px)",
                                 sm: "repeat(2, minmax(0, 320px))",
-                                md: "repeat(3, minmax(0, 320px))", // max 3 per row
+                                md: "repeat(3, minmax(0, 320px))",
                             },
                             gap: 3,
                             mx: "auto",
@@ -132,7 +134,7 @@ export default async function OfficersPage() {
                                             alt={officer.name}
                                             sx={{
                                                 width: "100%",
-                                                height: "auto", // show full photo, no cropping
+                                                height: "auto",
                                                 objectFit: "cover",
                                                 objectPosition: "center center",
                                             }}
@@ -148,7 +150,6 @@ export default async function OfficersPage() {
                                             pb: 3,
                                         }}
                                     >
-                                        {/* Name + role */}
                                         <Typography
                                             variant="h6"
                                             sx={{
@@ -170,7 +171,6 @@ export default async function OfficersPage() {
                                             {officer.role}
                                         </Typography>
 
-                                        {/* Bio / intro */}
                                         {officer.bio && (
                                             <Typography
                                                 sx={{
@@ -184,7 +184,6 @@ export default async function OfficersPage() {
                                             </Typography>
                                         )}
 
-                                        {/* Bottom section: meta + contact, centered */}
                                         <Box
                                             sx={{
                                                 mt: "auto",
@@ -196,12 +195,7 @@ export default async function OfficersPage() {
                                             }}
                                         >
                                             {metaLine && (
-                                                <Typography
-                                                    sx={{
-                                                        fontSize: "0.9rem",
-                                                        opacity: 0.8,
-                                                    }}
-                                                >
+                                                <Typography sx={{ fontSize: "0.9rem", opacity: 0.8 }}>
                                                     {metaLine}
                                                 </Typography>
                                             )}

@@ -1,4 +1,14 @@
-import { Box, Typography, Card, CardContent, Button, CardMedia, Chip } from "@mui/material";
+// app/page.tsx
+
+import {
+    Box,
+    Typography,
+    Card,
+    CardContent,
+    Button,
+    CardMedia,
+    Chip,
+} from "@mui/material";
 import { client } from "../sanity/lib/client";
 import {
     allEventsQuery,
@@ -7,7 +17,10 @@ import {
 } from "../sanity/lib/queries";
 import HomeCarousel from "../components/HomeCarousel";
 import UpcomingEventsSection from "../components/UpcomingEventsSection";
-import HomeSplash from "../components/HomeSplash";
+
+// make this page always dynamic / non-cached
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 type Event = {
     _id: string;
@@ -43,9 +56,11 @@ function formatEventDate(dateStr?: string) {
 
 export default async function HomePage() {
     const [events, featured, carouselEntries] = await Promise.all([
-        client.fetch<Event[]>(allEventsQuery),
-        client.fetch<Event | null>(featuredEventQuery),
-        client.fetch<CarouselImage[]>(homeCarouselImagesQuery),
+        client.fetch<Event[]>(allEventsQuery, {}, { cache: "no-store" }),
+        client.fetch<Event | null>(featuredEventQuery, {}, { cache: "no-store" }),
+        client.fetch<CarouselImage[]>(homeCarouselImagesQuery, {}, {
+            cache: "no-store",
+        }),
     ]);
 
     const upcomingEvents: Event[] = featured
@@ -55,135 +70,150 @@ export default async function HomePage() {
     const carouselImages = (carouselEntries || []).map((img) => img.imageUrl);
 
     return (
-        <>
-            <HomeSplash />
+        <Box
+            sx={{
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+            }}
+        >
+            {/* ---------------------- HERO SECTION ---------------------- */}
+            <Box sx={{ textAlign: "center", mt: 4, mb: 2 }}>
+                <Typography
+                    variant="h2"
+                    sx={{
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "4px",
+                        color: "var(--accent-color)",
+                        textShadow: "0px 3px 6px rgba(0,0,0,0.35)",
+                    }}
+                >
+                    Asian Student Union
+                </Typography>
 
-            <Box
-                sx={{
-                    width: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                }}
-            >
-                {/* ---------------------- HERO SECTION ---------------------- */}
-                <Box sx={{ textAlign: "center", mt: 4, mb: 2 }}>
+                <Typography
+                    variant="h6"
+                    sx={{
+                        color: "var(--accent-color)",
+                        fontStyle: "italic",
+                        mt: 1,
+                        opacity: 0.9,
+                    }}
+                >
+                    Celebrating Culture & Community at SFSU
+                </Typography>
+            </Box>
+
+            {/* ---------------------- CAROUSEL ---------------------- */}
+            <HomeCarousel images={carouselImages} />
+
+            {/* ---------------------- FEATURED EVENT ---------------------- */}
+            {featured && (
+                <Box sx={{ width: "90%", maxWidth: "900px", mb: 6, mt: 4 }}>
                     <Typography
-                        variant="h2"
+                        variant="h4"
                         sx={{
+                            mb: 2,
                             fontWeight: 700,
-                            textTransform: "uppercase",
-                            letterSpacing: "4px",
-                            color: "var(--accent-color)",
-                            textShadow: "0px 3px 6px rgba(0,0,0,0.35)",
+                            color: "white",
+                            textShadow: "0 2px 4px rgba(0,0,0,0.4)",
                         }}
                     >
-                        Asian Student Union
+                        Featured Event
                     </Typography>
 
-                    <Typography
-                        variant="h6"
+                    <Card
                         sx={{
-                            color: "var(--accent-color)",
-                            fontStyle: "italic",
-                            mt: 1,
-                            opacity: 0.9,
+                            display: "flex",
+                            flexDirection: { xs: "column", md: "row" },
+                            background: "rgba(255,255,255,0.15)",
+                            backdropFilter: "blur(10px)",
+                            borderRadius: "18px",
+                            overflow: "hidden",
+                            border: "1px solid rgba(255,255,255,0.25)",
+                            boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
                         }}
                     >
-                        Celebrating Culture & Community at SFSU
-                    </Typography>
-                </Box>
-
-                {/* ---------------------- CAROUSEL ---------------------- */}
-                <HomeCarousel images={carouselImages} />
-
-                {/* ---------------------- FEATURED EVENT ---------------------- */}
-                {featured && (
-                    <Box sx={{ width: "90%", maxWidth: "900px", mb: 6, mt: 4 }}>
-                        <Typography
-                            variant="h4"
-                            sx={{ mb: 2, fontWeight: 700, color: "white", textShadow: "0 2px 4px rgba(0,0,0,0.4)" }}
-                        >
-                            Featured Event
-                        </Typography>
-
-                        <Card
+                        <CardMedia
+                            component="img"
+                            image={
+                                featured.imageUrl || "/mainpagephotos/bonfiremain.jpg"
+                            }
+                            alt={featured.title}
                             sx={{
-                                display: "flex",
-                                flexDirection: { xs: "column", md: "row" },
-                                background: "rgba(255,255,255,0.15)",
-                                backdropFilter: "blur(10px)",
-                                borderRadius: "18px",
-                                overflow: "hidden",
-                                border: "1px solid rgba(255,255,255,0.25)",
-                                boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+                                width: { xs: "100%", md: "50%" },
+                                objectFit: "cover",
                             }}
-                        >
-                            <CardMedia
-                                component="img"
-                                image={featured.imageUrl || "/mainpagephotos/bonfiremain.jpg"}
-                                alt={featured.title}
-                                sx={{ width: { xs: "100%", md: "50%" }, objectFit: "cover" }}
+                        />
+
+                        <CardContent sx={{ flex: 1, color: "white" }}>
+                            <Chip
+                                label="Featured"
+                                sx={{
+                                    backgroundColor: "var(--accent-color)",
+                                    color: "var(--primary-color)",
+                                    fontWeight: 700,
+                                    mb: 1,
+                                }}
                             />
 
-                            <CardContent sx={{ flex: 1, color: "white" }}>
-                                <Chip
-                                    label="Featured"
-                                    sx={{
-                                        backgroundColor: "var(--accent-color)",
-                                        color: "var(--primary-color)",
-                                        fontWeight: 700,
-                                        mb: 1,
-                                    }}
-                                />
+                            <Typography
+                                variant="h5"
+                                sx={{
+                                    fontWeight: 700,
+                                    color: "var(--accent-color)",
+                                }}
+                            >
+                                {featured.title}
+                            </Typography>
 
-                                <Typography variant="h5" sx={{ fontWeight: 700, color: "var(--accent-color)" }}>
-                                    {featured.title}
-                                </Typography>
+                            <Typography sx={{ mt: 1 }}>
+                                {formatEventDate(featured.date)}
+                                {featured.time ? ` • ${featured.time}` : ""}
+                            </Typography>
+                            <Typography sx={{ mb: 2 }}>{featured.location}</Typography>
 
-                                <Typography sx={{ mt: 1 }}>
-                                    {formatEventDate(featured.date)}
-                                    {featured.time ? ` • ${featured.time}` : ""}
-                                </Typography>
-                                <Typography sx={{ mb: 2 }}>{featured.location}</Typography>
-
-                                <Button
-                                    href={
-                                        featured.slug
-                                            ? `/events/${featured.slug}`
-                                            : featured.link && featured.link.trim() !== ""
-                                                ? featured.link
-                                                : "/#events"
-                                    }
-                                    sx={{
-                                        backgroundColor: "var(--accent-color)",
-                                        color: "var(--primary-color)",
-                                        fontWeight: 700,
-                                        "&:hover": { backgroundColor: "#ffdc55" },
-                                    }}
-                                >
-                                    Learn More
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </Box>
-                )}
-
-                {/* ---------------------- UPCOMING EVENTS ---------------------- */}
-                <Box id="events" sx={{ width: "90%", maxWidth: "800px", mb: 10 }}>
-                    <Typography variant="h4" sx={{ mb: 2, fontWeight: 700, color: "white" }}>
-                        Upcoming Events
-                    </Typography>
-
-                    {upcomingEvents.length === 0 ? (
-                        <Typography sx={{ color: "#ddd" }}>
-                            No upcoming events yet. Stay posted on our Instagram for updates.
-                        </Typography>
-                    ) : (
-                        <UpcomingEventsSection events={upcomingEvents} />
-                    )}
+                            <Button
+                                href={
+                                    featured.slug
+                                        ? `/events/${featured.slug}`
+                                        : featured.link && featured.link.trim() !== ""
+                                            ? featured.link
+                                            : "/#events"
+                                }
+                                sx={{
+                                    backgroundColor: "var(--accent-color)",
+                                    color: "var(--primary-color)",
+                                    fontWeight: 700,
+                                    "&:hover": { backgroundColor: "#ffdc55" },
+                                }}
+                            >
+                                Learn More
+                            </Button>
+                        </CardContent>
+                    </Card>
                 </Box>
+            )}
+
+            {/* ---------------------- UPCOMING EVENTS ---------------------- */}
+            <Box id="events" sx={{ width: "90%", maxWidth: "800px", mb: 10 }}>
+                <Typography
+                    variant="h4"
+                    sx={{ mb: 2, fontWeight: 700, color: "white" }}
+                >
+                    Upcoming Events
+                </Typography>
+
+                {upcomingEvents.length === 0 ? (
+                    <Typography sx={{ color: "#ddd" }}>
+                        No upcoming events yet. Stay posted on our Instagram for updates.
+                    </Typography>
+                ) : (
+                    <UpcomingEventsSection events={upcomingEvents} />
+                )}
             </Box>
-        </>
+        </Box>
     );
 }

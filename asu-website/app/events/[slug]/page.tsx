@@ -12,6 +12,9 @@ import {
 import { groq } from "next-sanity";
 import { client } from "../../../sanity/lib/client";
 
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
+
 type Event = {
     _id: string;
     title: string;
@@ -25,7 +28,6 @@ type Event = {
     description?: any[];
 };
 
-// INLINE query: no $slug param
 const eventBySlugQuery = (slug: string) => groq`
   *[_type == "event" && slug.current == "${slug}"][0]{
     _id,
@@ -71,15 +73,18 @@ function Description({ blocks }: { blocks?: any[] }) {
     );
 }
 
-// NOTE: params is a Promise in your Next version, so we must await it
 export default async function EventPage({
                                             params,
                                         }: {
-    params: Promise<{ slug: string }>;
+    params: { slug: string };
 }) {
-    const { slug } = await params;
+    const { slug } = params;
 
-    const event = await client.fetch<Event | null>(eventBySlugQuery(slug));
+    const event = await client.fetch<Event | null>(
+        eventBySlugQuery(slug),
+        {},
+        { cache: "no-store" }
+    );
 
     if (!event) {
         return (
@@ -99,9 +104,7 @@ export default async function EventPage({
     }
 
     const primaryCtaHref =
-        event.link && event.link.trim() !== ""
-            ? event.link
-            : "/#events";
+        event.link && event.link.trim() !== "" ? event.link : "/#events";
 
     const primaryCtaLabel =
         event.link && event.link.trim() !== "" ? "Sign Up" : "Back to Events";
@@ -136,18 +139,11 @@ export default async function EventPage({
                         component="img"
                         image={event.imageUrl}
                         alt={event.title}
-                        sx={{
-                            maxHeight: 460,
-                            objectFit: "cover",
-                        }}
+                        sx={{ maxHeight: 460, objectFit: "cover" }}
                     />
                 )}
 
-                <CardContent
-                    sx={{
-                        p: { xs: 3, md: 4 },
-                    }}
-                >
+                <CardContent sx={{ p: { xs: 3, md: 4 } }}>
                     <Stack
                         direction="row"
                         justifyContent="space-between"
@@ -191,7 +187,6 @@ export default async function EventPage({
                             )}
                         </Box>
 
-                        {/* Top-right Back to Events */}
                         <Box sx={{ display: { xs: "none", md: "flex" }, gap: 1 }}>
                             <Button
                                 href="/#events"
@@ -214,7 +209,6 @@ export default async function EventPage({
 
                     <Description blocks={event.description} />
 
-                    {/* Bottom CTA row – single yellow button */}
                     <Box
                         sx={{
                             mt: 4,
