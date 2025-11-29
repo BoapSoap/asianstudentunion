@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -40,9 +40,30 @@ const NAV_BODY_FAMILY = navBodyFont.style.fontFamily;
 const NAV_TITLE_FAMILY = navTitleFont.style.fontFamily;
 // ------------------------------------------------------
 
+// Title sequence — English shows up between language pairs
+const EN_TITLE = { text: "Asian Student Union", lang: "en" };
+
+const TITLE_SEQUENCE = [
+    EN_TITLE,
+    { text: "亚洲学生联合会", lang: "zh-Hans" }, // Chinese (Simplified)
+    { text: "アジア学生会", lang: "ja" },       // Japanese
+    EN_TITLE,
+    { text: "아시안 학생회", lang: "ko" },       // Korean
+    { text: "एशियन छात्र संघ", lang: "hi" },     // Hindi
+    EN_TITLE,
+    { text: "Samahan ng Mga Estudyanteng Asyano", lang: "fil" }, // Filipino - i hope this is accurate
+    EN_TITLE,
+];
+
 export default function Navbar() {
     const [logoWiggle, setLogoWiggle] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+
+    // sequence + typewriter state
+    const [sequenceIndex, setSequenceIndex] = useState(0);
+    const [displayedTitle, setDisplayedTitle] = useState(
+        TITLE_SEQUENCE[0].text
+    );
 
     const pathname = usePathname();
 
@@ -52,6 +73,35 @@ export default function Navbar() {
         { label: "Officers", href: "/officers" },
         { label: "Gallery", href: "/gallery" },
     ];
+
+    // Typewriter / spell-out animation for the navbar title
+    useEffect(() => {
+        const full = TITLE_SEQUENCE[sequenceIndex].text;
+
+        setDisplayedTitle(""); // clear before typing
+        let charIndex = 0;
+        let dwellTimeout: ReturnType<typeof setTimeout> | undefined;
+
+        const typingInterval = setInterval(() => {
+            charIndex += 1;
+            setDisplayedTitle(full.slice(0, charIndex));
+
+            if (charIndex >= full.length) {
+                clearInterval(typingInterval);
+                // pause on the completed word, then move to next sequence item
+                dwellTimeout = setTimeout(() => {
+                    setSequenceIndex(
+                        (prev) => (prev + 1) % TITLE_SEQUENCE.length
+                    );
+                }, 1800);
+            }
+        }, 70); // speed per character
+
+        return () => {
+            clearInterval(typingInterval);
+            if (dwellTimeout) clearTimeout(dwellTimeout);
+        };
+    }, [sequenceIndex]);
 
     return (
         <AppBar
@@ -99,7 +149,7 @@ export default function Navbar() {
                     />
                 </IconButton>
 
-                {/* TITLE — uses NAV_TITLE_FAMILY only */}
+                {/* TITLE — rotating languages with typewriter effect */}
                 <Typography
                     variant="h6"
                     sx={{
@@ -111,10 +161,25 @@ export default function Navbar() {
                         fontSize: { xs: "1.7rem", sm: "1.9rem" },
                         lineHeight: 1.1,
                         fontFamily: NAV_TITLE_FAMILY,
+                        overflow: "visible",
                     }}
                 >
-                    <Link href="/" style={{ color: "inherit", textDecoration: "none" }}>
-                        Asian Student Union
+                    <Link
+                        href="/"
+                        style={{
+                            color: "inherit",
+                            textDecoration: "none",
+                            display: "inline-block",
+                        }}
+                    >
+                        <span
+                            style={{
+                                display: "inline-block",
+                                whiteSpace: "nowrap",
+                            }}
+                        >
+                            {displayedTitle}
+                        </span>
                     </Link>
                 </Typography>
 
@@ -159,7 +224,7 @@ export default function Navbar() {
                         height: "100%",
                     }}
                 >
-                    {/* Drawer header with logo + title (title uses NAV_TITLE_FAMILY) */}
+                    {/* Drawer header with logo + animated title */}
                     <Box
                         sx={{
                             display: "flex",
@@ -210,9 +275,17 @@ export default function Navbar() {
                                 fontSize: "1.5rem",
                                 lineHeight: 1.1,
                                 fontFamily: NAV_TITLE_FAMILY,
+                                overflow: "visible",
                             }}
                         >
-                            Asian Student Union
+                            <span
+                                style={{
+                                    display: "inline-block",
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                {displayedTitle}
+                            </span>
                         </Typography>
                     </Box>
 
