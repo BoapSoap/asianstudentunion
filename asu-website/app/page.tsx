@@ -17,10 +17,23 @@ import {
 } from "../sanity/lib/queries";
 import HomeCarousel from "../components/HomeCarousel";
 import UpcomingEventsSection from "../components/UpcomingEventsSection";
+import { Inter, Roboto_Mono } from "next/font/google";
 
 // make this page always dynamic / non-cached
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
+
+// Inter for big hero headline
+const heroTitleFont = Inter({
+    subsets: ["latin"],
+    weight: ["800"],
+});
+
+// Roboto Mono for the subline
+const heroSubFont = Roboto_Mono({
+    subsets: ["latin"],
+    weight: ["400"],
+});
 
 type Event = {
     _id: string;
@@ -79,15 +92,26 @@ export default async function HomePage() {
             }}
         >
             {/* ---------------------- HERO SECTION ---------------------- */}
-            <Box sx={{ textAlign: "center", mt: 4, mb: 2 }}>
+            <Box
+                sx={{
+                    textAlign: "center",
+                    mt: 4,
+                    mb: 2,
+                    px: 2,
+                }}
+            >
                 <Typography
-                    variant="h2"
+                    component="h1"
                     sx={{
-                        fontWeight: 700,
+                        fontFamily: heroTitleFont.style.fontFamily,
+                        fontWeight: 800,
                         textTransform: "uppercase",
-                        letterSpacing: "4px",
+                        letterSpacing: { xs: "0.14em", md: "0.18em" },
+                        fontSize: { xs: "2rem", sm: "2.5rem", md: "3.1rem" },
+                        lineHeight: 1.1,
                         color: "var(--accent-color)",
-                        textShadow: "0px 3px 6px rgba(0,0,0,0.35)",
+                        textShadow: "0px 3px 6px rgba(0, 0, 0, 0.35)",
+                        whiteSpace: { xs: "normal", sm: "normal", md: "normal" },
                     }}
                 >
                     Asian Student Union
@@ -97,9 +121,11 @@ export default async function HomePage() {
                     variant="h6"
                     sx={{
                         color: "var(--accent-color)",
-                        fontStyle: "italic",
                         mt: 1,
                         opacity: 0.9,
+                        fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                        fontStyle: "normal",
+                        fontFamily: heroSubFont.style.fontFamily,
                     }}
                 >
                     Celebrating Culture & Community at SFSU
