@@ -20,6 +20,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import { usePathname } from "next/navigation";
 import { Roboto_Mono, Mr_Dafoe } from "next/font/google";
+import GlassSurface from "./GlassSurface";
 
 // ------------------------------------------------------
 // FONT CONFIG — change these two blocks to try new fonts
@@ -121,23 +122,25 @@ export default function Navbar() {
         >
             <Box
                 sx={{
-                    width: "100%",
+                    width: { xs: "calc(100% - 18px)", sm: "calc(100% - 26px)", md: "100%" },
                     maxWidth: 1180,
                     mx: "auto",
-                    px: { xs: 1.4, md: 2.2 },
-                    py: { xs: 0.3, md: 0.5 },
-                    background: "rgba(245, 245, 250, 0.1)",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: 30,
-                    backdropFilter: "blur(7px) saturate(1.02)",
-                    WebkitBackdropFilter: "blur(7px) saturate(1.02)",
-                    boxShadow: "0 12px 30px rgba(0,0,0,0.16)",
                 }}
             >
-                <Toolbar
-                    disableGutters
-                    sx={{ display: "flex", alignItems: "center", gap: 1.1 }}
+                <GlassSurface
+                    width="100%"
+                    height="auto"
+                    borderRadius={30}
+                    backgroundOpacity={0.22}
+                    saturation={1.05}
+                    displace={0}
+                    distortionScale={-80}
                 >
+                    <Box sx={{ px: { xs: 1.4, md: 2.2 }, py: { xs: 0.3, md: 0.5 }, width: "100%" }}>
+                        <Toolbar
+                            disableGutters
+                            sx={{ display: "flex", alignItems: "center", gap: 1.1 }}
+                        >
                 {/* MOBILE MENU BUTTON */}
                 <IconButton
                     sx={{ display: { xs: "flex", md: "none" }, color: "#FFD700", mr: 1 }}
@@ -238,7 +241,9 @@ export default function Navbar() {
                         </AnimatedNavButton>
                     ))}
                 </Box>
-                </Toolbar>
+                        </Toolbar>
+                    </Box>
+                </GlassSurface>
             </Box>
 
             {/* -------- MOBILE DRAWER -------- */}

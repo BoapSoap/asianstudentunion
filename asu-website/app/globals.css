@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --primary-color: #b71c1c;
   --accent-color: #ffd700;
@@ -18,9 +20,10 @@ html, body {
 
 body {
   background:
-          linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)),
-          url("/resources/backdrop.webp") center/cover no-repeat fixed;
-  background-color: #0a0a0a;
+          radial-gradient(circle at 18% 18%, rgba(214, 47, 47, 0.35), transparent 46%),
+          radial-gradient(circle at 78% 72%, rgba(255, 134, 134, 0.3), transparent 45%),
+          linear-gradient(145deg, #1a0404 0%, #240303 45%, #2d0202 100%),
+          #240303;
 }
 
 .navbar {
@@ -32,8 +35,6 @@ body {
   top: 0;
   z-index: 100;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  -webkit-backdrop-filter: blur(6px) saturate(1.2);
-  backdrop-filter: blur(6px) saturate(1.2);
 }
 
 .navbar h1 {

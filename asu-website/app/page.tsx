@@ -1,14 +1,6 @@
 // app/page.tsx
 
-import {
-    Box,
-    Typography,
-    Card,
-    CardContent,
-    Button,
-    CardMedia,
-    Chip,
-} from "@mui/material";
+import { Box, Typography, Button, CardMedia, Chip } from "@mui/material";
 import { client } from "../sanity/lib/client";
 import {
     allEventsQuery,
@@ -17,6 +9,7 @@ import {
 } from "../sanity/lib/queries";
 import HomeCarousel from "../components/HomeCarousel";
 import UpcomingEventsSection from "../components/UpcomingEventsSection";
+import GlassSurface from "../components/GlassSurface";
 import { Inter, Roboto_Mono } from "next/font/google";
 
 // make this page always dynamic / non-cached
@@ -34,6 +27,17 @@ const heroSubFont = Roboto_Mono({
     subsets: ["latin"],
     weight: ["400"],
 });
+
+function getFeaturedSummary(description?: any[]) {
+    const text =
+        description?.[0]?.children
+            ?.map((c: any) => c?.text || "")
+            .join("")
+            .trim() || "";
+    if (!text) return "Join us for this special event.";
+    const limit = 240;
+    return text.length > limit ? `${text.slice(0, limit).trimEnd()}…` : text;
+}
 
 type Event = {
     _id: string;
@@ -183,75 +187,124 @@ export default async function HomePage() {
                         Featured Event
                     </Typography>
 
-                    <Card
-                        sx={{
-                            display: "flex",
-                            flexDirection: { xs: "column", md: "row" },
-                            background: "rgba(255,255,255,0.15)",
-                            backdropFilter: "blur(10px)",
-                            borderRadius: "18px",
-                            overflow: "hidden",
-                            border: "1px solid rgba(255,255,255,0.25)",
-                            boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
-                        }}
+                    <GlassSurface
+                        className="featured-glass-card"
+                        width="100%"
+                        height="100%"
+                        borderRadius={28}
+                        forceFallback
+                        displace={0}
+                        distortionScale={-60}
+                        redOffset={0}
+                        greenOffset={8}
+                        blueOffset={12}
+                        brightness={58}
+                        opacity={0.86}
+                        backgroundOpacity={0.12}
+                        mixBlendMode="normal"
+                        saturation={1.05}
                     >
-                        <CardMedia
-                            component="img"
-                            image={
-                                featured.imageUrl || "/mainpagephotos/bonfiremain.jpg"
-                            }
-                            alt={featured.title}
+                        <Box
                             sx={{
-                                width: { xs: "100%", md: "50%" },
-                                objectFit: "cover",
+                                display: "flex",
+                                flexDirection: { xs: "column", md: "row" },
+                                width: "100%",
+                                height: "100%",
+                                borderRadius: "22px",
+                                overflow: "hidden",
                             }}
-                        />
-
-                        <CardContent sx={{ flex: 1, color: "white" }}>
-                            <Chip
-                                label="Featured"
+                        >
+                            <CardMedia
+                                component="img"
+                                image={
+                                    featured.imageUrl || "/mainpagephotos/bonfiremain.jpg"
+                                }
+                                alt={featured.title}
                                 sx={{
-                                    backgroundColor: "var(--accent-color)",
-                                    color: "var(--primary-color)",
-                                    fontWeight: 700,
-                                    mb: 1,
+                                    width: { xs: "100%", md: "50%" },
+                                    objectFit: "cover",
+                                    minHeight: { xs: 220, md: "100%" },
                                 }}
                             />
 
-                            <Typography
-                                variant="h5"
-                                sx={{
-                                    fontWeight: 700,
-                                    color: "var(--accent-color)",
-                                }}
-                            >
-                                {featured.title}
-                            </Typography>
+                            <Box sx={{ flex: 1, color: "white", p: { xs: 2.5, md: 3 } }}>
+                                <Chip
+                                    label="Featured"
+                                    sx={{
+                                        backgroundColor: "var(--accent-color)",
+                                        color: "var(--primary-color)",
+                                        fontWeight: 700,
+                                        mb: 1,
+                                    }}
+                                />
 
-                            <Typography sx={{ mt: 1 }}>
-                                {formatEventDate(featured.date)}
-                                {featured.time ? ` • ${featured.time}` : ""}
-                            </Typography>
-                            <Typography sx={{ mb: 2 }}>{featured.location}</Typography>
+                                <Typography
+                                    component="h2"
+                                    sx={{
+                                        fontWeight: 800,
+                                        fontSize: { xs: "1.5rem", md: "1.85rem" },
+                                        mb: 1,
+                                        color: "var(--accent-color)",
+                                        textShadow: "0 1px 8px rgba(0,0,0,0.35)",
+                                    }}
+                                >
+                                    {featured.title}
+                                </Typography>
 
-                            {/* Learn More should ALWAYS go to the detail page if slug exists */}
-                            {typeof featured.slug === "string" &&
-                                featured.slug.trim() !== "" && (
-                                    <Button
-                                        href={`/events/${featured.slug}`}
+                                <Typography
+                                    sx={{
+                                        display: "flex",
+                                        gap: 1,
+                                        alignItems: "center",
+                                        color: "rgba(255,255,255,0.95)",
+                                        mb: 0.5,
+                                        fontWeight: 500,
+                                        fontSize: { xs: "1rem", md: "1.05rem" },
+                                    }}
+                                >
+                                    {featured.date && <span>{formatEventDate(featured.date)}</span>}
+                                    {featured.time && (
+                                        <>
+                                            <span>•</span>
+                                            <span>{featured.time}</span>
+                                        </>
+                                    )}
+                                </Typography>
+
+                                {featured.location && (
+                                    <Typography
                                         sx={{
-                                            backgroundColor: "var(--accent-color)",
-                                            color: "var(--primary-color)",
-                                            fontWeight: 700,
-                                            textTransform: "none",
-                                            "&:hover": { backgroundColor: "#ffdc55" },
+                                            color: "rgba(255,255,255,0.95)",
+                                            mb: 1.5,
+                                            fontWeight: 500,
+                                            fontSize: { xs: "1rem", md: "1.05rem" },
                                         }}
                                     >
-                                        Learn More
-                                    </Button>
+                                        {featured.location}
+                                    </Typography>
                                 )}
-                        </CardContent>
-                    </Card>
+
+                                {typeof featured.slug === "string" &&
+                                    featured.slug.trim() !== "" && (
+                                        <Button
+                                            href={`/events/${featured.slug}`}
+                                            sx={{
+                                                backgroundColor: "var(--accent-color)",
+                                                color: "var(--primary-color)",
+                                                fontWeight: 800,
+                                                textTransform: "none",
+                                                px: 2.5,
+                                                py: 1,
+                                                borderRadius: 999,
+                                                "&:hover": { backgroundColor: "#ffdc55" },
+                                            }}
+                                        >
+                                            Learn More
+                                        </Button>
+                                    )}
+                            </Box>
+                        </Box>
+                    </GlassSurface>
                 </Box>
             )}
 
