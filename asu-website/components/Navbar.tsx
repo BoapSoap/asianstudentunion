@@ -64,6 +64,7 @@ export default function Navbar() {
     const [displayedTitle, setDisplayedTitle] = useState(
         TITLE_SEQUENCE[0].text
     );
+    const [displayedLang, setDisplayedLang] = useState(TITLE_SEQUENCE[0].lang);
 
     const pathname = usePathname();
 
@@ -76,7 +77,9 @@ export default function Navbar() {
 
     // Typewriter / spell-out animation for the navbar title
     useEffect(() => {
-        const full = TITLE_SEQUENCE[sequenceIndex].text;
+        const entry = TITLE_SEQUENCE[sequenceIndex];
+        const full = entry.text;
+        setDisplayedLang(entry.lang);
 
         setDisplayedTitle(""); // clear before typing
         let charIndex = 0;
@@ -106,14 +109,35 @@ export default function Navbar() {
     return (
         <AppBar
             position="sticky"
-            elevation={3}
+            elevation={0}
             className={NAV_BODY_CLASS}
             sx={{
-                backgroundColor: "rgba(183, 28, 28, 0.95)",
-                backdropFilter: "blur(6px) saturate(1.2)",
+                background: "transparent",
+                boxShadow: "none",
+                top: 6,
+                pt: 0.2,
+                pb: 0.2,
             }}
         >
-            <Toolbar sx={{ display: "flex", alignItems: "center" }}>
+            <Box
+                sx={{
+                    width: "100%",
+                    maxWidth: 1180,
+                    mx: "auto",
+                    px: { xs: 1.4, md: 2.2 },
+                    py: { xs: 0.3, md: 0.5 },
+                    background: "rgba(245, 245, 250, 0.1)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 30,
+                    backdropFilter: "blur(7px) saturate(1.02)",
+                    WebkitBackdropFilter: "blur(7px) saturate(1.02)",
+                    boxShadow: "0 12px 30px rgba(0,0,0,0.16)",
+                }}
+            >
+                <Toolbar
+                    disableGutters
+                    sx={{ display: "flex", alignItems: "center", gap: 1.1 }}
+                >
                 {/* MOBILE MENU BUTTON */}
                 <IconButton
                     sx={{ display: { xs: "flex", md: "none" }, color: "#FFD700", mr: 1 }}
@@ -131,7 +155,7 @@ export default function Navbar() {
                     }}
                     sx={{
                         p: 0,
-                        mr: 2,
+                        mr: 1.5,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -143,8 +167,8 @@ export default function Navbar() {
                     <Image
                         src="/resources/mainicon.png"
                         alt="ASU Logo"
-                        width={40}
-                        height={40}
+                        width={36}
+                        height={36}
                         style={{ borderRadius: "50%" }}
                     />
                 </IconButton>
@@ -154,14 +178,27 @@ export default function Navbar() {
                     variant="h6"
                     sx={{
                         flexGrow: 1,
-                        fontWeight: 400,
+                        fontWeight: 500,
                         color: "#FFD700",
                         textTransform: "none",
-                        letterSpacing: 0,
-                        fontSize: { xs: "1.7rem", sm: "1.9rem" },
-                        lineHeight: 1.1,
+                        letterSpacing: "-0.01em",
+                        fontSize: {
+                            xs:
+                                displayedLang === "fil"
+                                    ? "1.05rem"
+                                    : "clamp(1.35rem, 5.5vw, 1.65rem)",
+                            sm: "2.2rem",
+                        },
+                        lineHeight: { xs: 1.15, sm: 1.05 },
                         fontFamily: NAV_TITLE_FAMILY,
-                        overflow: "visible",
+                        overflow: { xs: "visible", sm: "visible" },
+                        maxWidth: { xs: "calc(100% - 120px)", sm: "100%" },
+                        whiteSpace: { xs: "nowrap", sm: "nowrap" },
+                        mr: { xs: 1, md: 1.5 },
+                        textShadow: {
+                            xs: "none",
+                            sm: "0 3px 14px rgba(0,0,0,0.45), 0 0 28px rgba(255,215,0,0.45)",
+                        },
                     }}
                 >
                     <Link
@@ -169,13 +206,13 @@ export default function Navbar() {
                         style={{
                             color: "inherit",
                             textDecoration: "none",
-                            display: "inline-block",
+                            display: "inline",
                         }}
                     >
                         <span
                             style={{
-                                display: "inline-block",
-                                whiteSpace: "nowrap",
+                                display: "inline",
+                                whiteSpace: "normal",
                             }}
                         >
                             {displayedTitle}
@@ -183,8 +220,14 @@ export default function Navbar() {
                     </Link>
                 </Typography>
 
-                {/* DESKTOP NAV BUTTONS — use body font */}
-                <Box sx={{ display: { xs: "none", md: "flex" }, gap: 2 }}>
+                {/* DESKTOP NAV BUTTONS – use body font */}
+                <Box
+                    sx={{
+                        display: { xs: "none", md: "flex" },
+                        gap: 1.4,
+                        pr: 0.8,
+                    }}
+                >
                     {navItems.map((item) => (
                         <AnimatedNavButton
                             key={item.href}
@@ -195,7 +238,8 @@ export default function Navbar() {
                         </AnimatedNavButton>
                     ))}
                 </Box>
-            </Toolbar>
+                </Toolbar>
+            </Box>
 
             {/* -------- MOBILE DRAWER -------- */}
             <Drawer
@@ -268,14 +312,23 @@ export default function Navbar() {
                         <Typography
                             variant="subtitle1"
                             sx={{
-                                fontWeight: 400,
+                                fontWeight: 500,
                                 textTransform: "none",
-                                letterSpacing: 0,
+                                letterSpacing: "-0.01em",
                                 color: "#FFD700",
-                                fontSize: "1.5rem",
-                                lineHeight: 1.1,
+                                fontSize:
+                                    displayedLang === "fil"
+                                        ? "1.05rem"
+                                        : "clamp(1.35rem, 5.5vw, 1.65rem)",
+                                lineHeight: 1.12,
                                 fontFamily: NAV_TITLE_FAMILY,
                                 overflow: "visible",
+                                maxWidth: "100%",
+                                whiteSpace: "nowrap",
+                                textShadow: {
+                                    xs: "none",
+                                    sm: "0 3px 14px rgba(0,0,0,0.45), 0 0 28px rgba(255,215,0,0.45)",
+                                },
                             }}
                         >
                             <span
@@ -386,39 +439,59 @@ function AnimatedNavButton({
     return (
         <Button
             component={Link}
-            href={href}
-            onMouseDown={() => setPressed(true)}
-            onMouseUp={() => setPressed(false)}
-            onMouseLeave={() => setPressed(false)}
-            sx={{
-                position: "relative",
-                color: "#FFD700",
-                fontWeight: 600,
-                transition: "transform .15s ease",
-                fontFamily: NAV_BODY_FAMILY,
+                href={href}
+                onMouseDown={() => setPressed(true)}
+                onMouseUp={() => setPressed(false)}
+                onMouseLeave={() => setPressed(false)}
+                sx={{
+                    position: "relative",
+                    color: "#FFD700",
+                    fontWeight: 500,
+                    transition: "transform .18s ease, color .18s ease",
+                    fontFamily: NAV_BODY_FAMILY,
+                    letterSpacing: "0.08em",
+                    px: 1.7,
+                    py: 0.75,
+                    borderRadius: 999,
+                    overflow: "hidden",
 
                 // Click Pop Animation
                 transform: pressed ? "scale(0.9)" : "scale(1)",
 
-                // Hover shimmer
-                "&:hover": {
-                    color: "#fff4b0",
+                "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    inset: 0,
+                    background:
+                        "linear-gradient(135deg, rgba(183,28,28,0), rgba(183,28,28,0.25))",
+                    opacity: active ? 1 : 0,
+                    transition: "opacity .2s ease",
+                    zIndex: -1,
                 },
-
-                // Active underline UI
                 "&::after": {
                     content: '""',
                     position: "absolute",
-                    left: 0,
-                    bottom: -4,
-                    width: active ? "100%" : "0%",
-                    height: "3px",
-                    backgroundColor: "#FFD700",
-                    borderRadius: "2px",
-                    transition: "width .25s ease",
+                    left: "12%",
+                    right: "12%",
+                    bottom: 4,
+                    height: "2px",
+                    backgroundColor: "#b71c1c",
+                    borderRadius: 999,
+                    transform: active ? "scaleX(1)" : "scaleX(0)",
+                    transformOrigin: "left",
+                    transition: "transform .18s ease",
                 },
-                "&:hover::after": {
-                    width: "100%",
+
+                "&:hover::before": {
+                    opacity: 1,
+                },
+
+                "&:hover": {
+                    color: "#fff4b0",
+                    textShadow: "0 0 8px rgba(255,215,0,0.35)",
+                    "&::after": {
+                        transform: "scaleX(1)",
+                    },
                 },
             }}
         >

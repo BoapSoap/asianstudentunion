@@ -40,7 +40,7 @@ export default async function OfficersPage() {
                 width: "100%",
                 display: "flex",
                 justifyContent: "center",
-                mt: 6,
+                mt: 2.5,
                 mb: 10,
             }}
         >

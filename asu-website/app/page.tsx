@@ -95,26 +95,57 @@ export default async function HomePage() {
             <Box
                 sx={{
                     textAlign: "center",
-                    mt: 4,
-                    mb: 2,
+                    mt: { xs: 2.5, md: 4 },
+                    mb: { xs: 1.5, md: 2.5 },
                     px: 2,
                 }}
             >
                 <Typography
                     component="h1"
+                    className="hero-title-letters"
                     sx={{
                         fontFamily: heroTitleFont.style.fontFamily,
-                        fontWeight: 800,
+                        fontWeight: 900,
                         textTransform: "uppercase",
-                        letterSpacing: { xs: "0.14em", md: "0.18em" },
-                        fontSize: { xs: "2rem", sm: "2.5rem", md: "3.1rem" },
-                        lineHeight: 1.1,
+                        letterSpacing: { xs: "0.0025em", md: "0.08em" },
+                        fontSize: { xs: "1.45rem", sm: "2.2rem", md: "3.3rem", lg: "3.8rem" },
+                        lineHeight: { xs: 1.04, md: 1.05 },
                         color: "var(--accent-color)",
-                        textShadow: "0px 3px 6px rgba(0, 0, 0, 0.35)",
-                        whiteSpace: { xs: "normal", sm: "normal", md: "normal" },
+                        textShadow: "none",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        justifyContent: "center",
+                        rowGap: "0.1em",
                     }}
                 >
-                    Asian Student Union
+                    {["Asian", "Student", "Union"].map((word, wi) => (
+                        <Box
+                            key={word}
+                            sx={{
+                                display: "inline-flex",
+                                flexWrap: "nowrap",
+                                mr: wi === 2 ? 0 : { xs: "0.15em", md: "0.35em" },
+                            }}
+                        >
+                            {Array.from(word).map((char, idx) => (
+                                <Box
+                                    key={`${word}-${idx}`}
+                                    component="span"
+                                    className="hero-char"
+                                    sx={{
+                                        display: "inline-block",
+                                        px: { xs: "0.01em", md: "0.04em" },
+                                        transition:
+                                            "letter-spacing .2s ease, transform .2s ease, color .2s ease",
+                                        letterSpacing: "0em",
+                                    }}
+                                >
+                                    {char}
+                                </Box>
+                            ))}
+                        </Box>
+                    ))}
                 </Typography>
 
                 <Typography
@@ -122,10 +153,12 @@ export default async function HomePage() {
                     sx={{
                         color: "var(--accent-color)",
                         mt: 1,
-                        opacity: 0.9,
-                        fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                        opacity: 0.95,
+                        fontSize: { xs: "1rem", sm: "1.15rem" },
                         fontStyle: "normal",
                         fontFamily: heroSubFont.style.fontFamily,
+                        letterSpacing: "0.05em",
+                        textShadow: "0 2px 6px rgba(0,0,0,0.35)",
                     }}
                 >
                     Celebrating Culture & Community at SFSU

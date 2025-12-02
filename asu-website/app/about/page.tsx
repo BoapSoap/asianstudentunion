@@ -80,7 +80,7 @@ export default function AboutPage() {
             <Box sx={{ width: "100%", maxWidth: 1100 }}>
                 <Box
                     sx={{
-                        mt: { xs: 5, md: 7 },
+                        mt: { xs: 2.5, md: 3 },
                         mb: { xs: 5, md: 7 },
                         p: { xs: 3, md: 5 },
                         borderRadius: "22px",

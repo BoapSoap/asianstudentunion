@@ -39,11 +39,11 @@ export default function HomeCarousel({ images }: HomeCarouselProps) {
                 maxWidth: "900px",
                 position: "relative",
                 overflow: "hidden",
-                borderRadius: "18px",
+                borderRadius: { xs: "14px", md: "18px" },
                 mb: 6,
                 border: "1px solid rgba(255,255,255,0.18)",
                 boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
-                height: "500px",
+                height: { xs: 240, sm: 360, md: 500 },
                 "&:hover .carousel-btn": {
                     opacity: 1,
                 },

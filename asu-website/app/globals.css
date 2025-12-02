@@ -103,3 +103,42 @@ html {
     transform: scale(1);
   }
 }
+
+/* Hero per-letter hover */
+.hero-title-letters .hero-char {
+  text-shadow: none;
+}
+.hero-title-letters .hero-char:hover {
+  letter-spacing: 0.18em;
+  transform: translateY(-2px);
+  color: #ffe87a;
+  text-shadow: 0 6px 16px rgba(0,0,0,0.45);
+}
+.hero-title-letters .hero-char:hover + .hero-char {
+  letter-spacing: 0.12em;
+  transform: translateY(-1px);
+  color: #ffeaa0;
+}
+.hero-title-letters .hero-char:has(+ .hero-char:hover) {
+  letter-spacing: 0.12em;
+  transform: translateY(-1px);
+  color: #ffeaa0;
+}
+@media (hover: none) {
+  .hero-title-letters .hero-char:active {
+    letter-spacing: 0.18em;
+    transform: translateY(-2px);
+    color: #ffe87a;
+    text-shadow: 0 6px 16px rgba(0,0,0,0.45);
+  }
+  .hero-title-letters .hero-char:active + .hero-char {
+    letter-spacing: 0.12em;
+    transform: translateY(-1px);
+    color: #ffeaa0;
+  }
+  .hero-title-letters .hero-char:has(+ .hero-char:active) {
+    letter-spacing: 0.12em;
+    transform: translateY(-1px);
+    color: #ffeaa0;
+  }
+}
