@@ -16,14 +16,12 @@ html, body {
   font-family: var(--font-stack);
   color: #333;
   min-height: 100dvh;
+  background-color: #1a0404;
+  color-scheme: dark;
 }
 
 body {
-  background:
-          radial-gradient(circle at 18% 18%, rgba(214, 47, 47, 0.35), transparent 46%),
-          radial-gradient(circle at 78% 72%, rgba(255, 134, 134, 0.3), transparent 45%),
-          linear-gradient(145deg, #1a0404 0%, #240303 45%, #2d0202 100%),
-          #240303;
+  background: transparent;
 }
 
 .navbar {
@@ -102,44 +100,5 @@ html {
     opacity: 0;              /* fade out so site shows */
     letter-spacing: 0.30em;
     transform: scale(1);
-  }
-}
-
-/* Hero per-letter hover */
-.hero-title-letters .hero-char {
-  text-shadow: none;
-}
-.hero-title-letters .hero-char:hover {
-  letter-spacing: 0.18em;
-  transform: translateY(-2px);
-  color: #ffe87a;
-  text-shadow: 0 6px 16px rgba(0,0,0,0.45);
-}
-.hero-title-letters .hero-char:hover + .hero-char {
-  letter-spacing: 0.12em;
-  transform: translateY(-1px);
-  color: #ffeaa0;
-}
-.hero-title-letters .hero-char:has(+ .hero-char:hover) {
-  letter-spacing: 0.12em;
-  transform: translateY(-1px);
-  color: #ffeaa0;
-}
-@media (hover: none) {
-  .hero-title-letters .hero-char:active {
-    letter-spacing: 0.18em;
-    transform: translateY(-2px);
-    color: #ffe87a;
-    text-shadow: 0 6px 16px rgba(0,0,0,0.45);
-  }
-  .hero-title-letters .hero-char:active + .hero-char {
-    letter-spacing: 0.12em;
-    transform: translateY(-1px);
-    color: #ffeaa0;
-  }
-  .hero-title-letters .hero-char:has(+ .hero-char:active) {
-    letter-spacing: 0.12em;
-    transform: translateY(-1px);
-    color: #ffeaa0;
   }
 }

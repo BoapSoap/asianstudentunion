@@ -39,6 +39,9 @@ export default function BackgroundLiquid() {
                 zIndex: -1,
                 overflow: "hidden",
                 pointerEvents: "none",
+                backgroundColor: "#1a0404",
+                background:
+                    "radial-gradient(circle at 18% 18%, rgba(214, 47, 47, 0.35), transparent 46%), radial-gradient(circle at 78% 72%, rgba(255, 134, 134, 0.3), transparent 45%), linear-gradient(145deg, #1a0404 0%, #240303 45%, #2d0202 100%), #240303",
             }}
         >
             <LiquidEther

@@ -151,6 +151,7 @@ export default function Navbar() {
 
                 {/* LOGO with Wiggle Animation */}
                 <IconButton
+                    component={Link}
                     href="/"
                     onMouseDown={() => {
                         setLogoWiggle(true);

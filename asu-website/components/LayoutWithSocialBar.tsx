@@ -22,6 +22,22 @@ export default function LayoutWithSocialBar({
         <>
             {children}
             {!isStudio && <SocialBar />}
+            {!isStudio && (
+                <div
+                    style={{
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "flex-start",
+                        padding: "0 16px 14px",
+                        fontSize: "0.78rem",
+                        color: "rgba(255,255,255,0.62)",
+                        letterSpacing: "0.01em",
+                        opacity: 0.78,
+                    }}
+                >
+                    <span>Designed and built by Anmol Tadikonda.</span>
+                </div>
+            )}
         </>
     );
 }

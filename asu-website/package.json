@@ -19,6 +19,7 @@
     "@sanity/image-url": "^1.2.0",
     "@sanity/vision": "^4.18.0",
     "clsx": "^2.1.1",
+    "motion": "^11.11.17",
     "next": "16.0.3",
     "next-sanity": "^11.6.8",
     "react": "19.2.0",
