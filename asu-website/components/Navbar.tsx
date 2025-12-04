@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type MouseEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -75,6 +75,22 @@ export default function Navbar() {
         { label: "Officers", href: "/officers" },
         { label: "Gallery", href: "/gallery" },
     ];
+
+    const handleHomeClick =
+        (closeDrawer = false) =>
+        (event: MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
+            if (closeDrawer) setMobileOpen(false);
+
+            // When we're already on the home page (or at a hash), Next won't reset scroll,
+            // so force the URL back to "/" and scroll to the top smoothly.
+            if (pathname === "/") {
+                event.preventDefault();
+                if (typeof window !== "undefined") {
+                    window.history.replaceState(null, "", "/");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+            }
+        };
 
     // Typewriter / spell-out animation for the navbar title
     useEffect(() => {
@@ -153,6 +169,7 @@ export default function Navbar() {
                 <IconButton
                     component={Link}
                     href="/"
+                    onClick={handleHomeClick()}
                     onMouseDown={() => {
                         setLogoWiggle(true);
                         setTimeout(() => setLogoWiggle(false), 300);
@@ -207,6 +224,7 @@ export default function Navbar() {
                 >
                     <Link
                         href="/"
+                        onClick={handleHomeClick()}
                         style={{
                             color: "inherit",
                             textDecoration: "none",
@@ -287,8 +305,8 @@ export default function Navbar() {
                         <Box
                             component={Link}
                             href="/"
-                            onClick={() => {
-                                setMobileOpen(false);
+                            onClick={(event) => {
+                                handleHomeClick(true)(event);
                                 setLogoWiggle(true);
                                 setTimeout(() => setLogoWiggle(false), 300);
                             }}
