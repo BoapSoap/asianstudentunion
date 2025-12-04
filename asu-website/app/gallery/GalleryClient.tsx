@@ -92,7 +92,7 @@ export default function GalleryClient({ albums }: GalleryClientProps) {
                 width: "100%",
                 display: "flex",
                 justifyContent: "center",
-                mt: 6,
+                mt: 2.5,
                 mb: 10,
             }}
         >

@@ -9,6 +9,7 @@ import {
     Chip,
     Stack,
 } from "@mui/material";
+import Link from "next/link";
 import { client } from "../../../sanity/lib/client";
 import { singleEventQuery, allEventsQuery } from "../../../sanity/lib/queries";
 
@@ -209,22 +210,23 @@ export default async function EventPage({
 
                         {/* Back to Events (top-right) */}
                         <Box sx={{ display: { xs: "none", md: "flex" }, gap: 1 }}>
-                            <Button
-                                href="/#events"
-                                sx={{
-                                    color: "white",
-                                    borderColor: "rgba(255,255,255,0.5)",
-                                    borderWidth: 1,
-                                    borderStyle: "solid",
-                                    textTransform: "none",
-                                    fontWeight: 600,
-                                    "&:hover": {
-                                        backgroundColor: "rgba(255,255,255,0.08)",
-                                    },
-                                }}
-                            >
-                                Back to Events
-                            </Button>
+                            <Link href="/#events" style={{ textDecoration: "none" }}>
+                                <Button
+                                    sx={{
+                                        color: "white",
+                                        borderColor: "rgba(255,255,255,0.5)",
+                                        borderWidth: 1,
+                                        borderStyle: "solid",
+                                        textTransform: "none",
+                                        fontWeight: 600,
+                                        "&:hover": {
+                                            backgroundColor: "rgba(255,255,255,0.08)",
+                                        },
+                                    }}
+                                >
+                                    Back to Events
+                                </Button>
+                            </Link>
                         </Box>
                     </Stack>
 

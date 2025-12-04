@@ -16,7 +16,7 @@ const timeline = [
     {
         year: "1968",
         title: "Third World Liberation Strike",
-        highlight: "It was the longest student strike in history — 167 days",
+        highlight: "It was the longest student strike in history - 167 days",
         bullets: [
             "This strike was started by the Third World Liberation Front to create an Ethnic Studies building.",
             "The TWLF is composed of: the Black Student Union, the Mexican American Student Confederation, the Philippine American Collegiate Endeavor (PACE), the Intercollegiate Chinese for Social Action (ICSA), the Latin American Students Organization (LASO), an American Indian student organization, and the Asian American Political Alliance.",
@@ -37,9 +37,9 @@ const timeline = [
         title: "Asian Student Union Established",
         bullets: [
             "ASU has three founders, who were all active in leadership roles and within the Asian American community:",
-            "1. Warren Mar — SF Chinatown",
-            "2. Cecil (seh-seal) Yoshida — SF Japantown",
-            "3. Victor Huey — Oakland Chinatown",
+            "1. Warren Mar - SF Chinatown",
+            "2. Cecil (seh-seal) Yoshida - SF Japantown",
+            "3. Victor Huey - Oakland Chinatown",
             "They had the same ideals as AAPA so they started Asian Student Union in 1974.",
             "AAPA (Asian American Political Alliance) and ASU are NOT the same thing. ASU did NOT form as a result of AAPA. However, ASU members did come from AAPA.",
         ],
@@ -80,8 +80,8 @@ export default function AboutPage() {
             <Box sx={{ width: "100%", maxWidth: 1100 }}>
                 <Box
                     sx={{
-                        mt: { xs: 5, md: 7 },
-                        mb: { xs: 5, md: 7 },
+                        mt: { xs: 2.5, md: 3 },
+                        mb: { xs: 4, md: 6 },
                         p: { xs: 3, md: 5 },
                         borderRadius: "22px",
                         background: "rgba(255,255,255,0.10)",
@@ -117,7 +117,7 @@ export default function AboutPage() {
                         }}
                     >
                         The Asian Student Union at SFSU has always been rooted in community,
-                        activism, and cultural pride. Here’s a quick timeline of the moments
+                        activism, and cultural pride. Here's a quick timeline of the moments
                         that shaped who we are today.
                     </Typography>
                     <Box
@@ -133,6 +133,81 @@ export default function AboutPage() {
                             pointerEvents: "none",
                         }}
                     />
+                </Box>
+
+                <Box
+                    sx={{
+                        mb: { xs: 4, md: 6 },
+                        p: { xs: 3, md: 4 },
+                        borderRadius: "20px",
+                        background: "rgba(255,255,255,0.14)",
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(255,255,255,0.18)",
+                        boxShadow: "0 12px 36px rgba(0,0,0,0.40)",
+                        display: "grid",
+                        gridTemplateColumns: { xs: "1fr", md: "320px 1fr" },
+                        gap: 3,
+                        alignItems: "center",
+                        color: "white",
+                        transform: mounted ? "translateY(0px)" : "translateY(14px)",
+                        opacity: mounted ? 1 : 0,
+                        transition: "all .9s ease .3s",
+                    }}
+                >
+                    <Box
+                        sx={{
+                            position: "relative",
+                            width: "100%",
+                            height: { xs: 220, md: 260 },
+                            borderRadius: "16px",
+                            overflow: "hidden",
+                            border: "1px solid rgba(255,255,255,0.18)",
+                            boxShadow: "0 8px 22px rgba(0,0,0,0.35)",
+                        }}
+                    >
+                        <Image
+                            src="/history/pabu.jpg"
+                            alt="Pabu the red panda mascot"
+                            fill
+                            style={{ objectFit: "cover" }}
+                        />
+                    </Box>
+
+                    <Box>
+                        <Chip
+                            label="Mascot"
+                            sx={{
+                                height: 30,
+                                fontWeight: 800,
+                                backgroundColor: "var(--accent-color)",
+                                color: "var(--primary-color)",
+                                mb: 1.2,
+                            }}
+                        />
+                        <Typography
+                            variant="h4"
+                            sx={{
+                                fontWeight: 900,
+                                color: "var(--accent-color)",
+                                mb: 1,
+                            }}
+                        >
+                            Pabu!
+                        </Typography>
+                        <Stack spacing={1}>
+                            <Typography sx={{ fontSize: "1.05rem", opacity: 0.95 }}>
+                                - Native to Asia
+                            </Typography>
+                            <Typography sx={{ fontSize: "1.05rem", opacity: 0.95 }}>
+                                - Stands for balance & kindness
+                            </Typography>
+                            <Typography sx={{ fontSize: "1.05rem", opacity: 0.95 }}>
+                                - He helps you find happiness within yourself, while also
+                                teaching you the importance of social relationships with the
+                                people you love
+                            </Typography>
+                        </Stack>
+                    </Box>
                 </Box>
 
                 <Box sx={{ position: "relative", pl: { xs: 2, md: 0 } }}>
@@ -244,7 +319,7 @@ export default function AboutPage() {
                                                                 opacity: 0.95,
                                                             }}
                                                         >
-                                                            • {b}
+                                                            - {b}
                                                         </Typography>
                                                     ))}
                                                 </Stack>
@@ -328,81 +403,6 @@ export default function AboutPage() {
                             );
                         })}
                     </Stack>
-                </Box>
-
-                <Box
-                    sx={{
-                        mt: 7,
-                        p: { xs: 3, md: 4 },
-                        borderRadius: "20px",
-                        background: "rgba(255,255,255,0.14)",
-                        backdropFilter: "blur(10px)",
-                        border: "1px solid rgba(255,255,255,0.18)",
-                        boxShadow: "0 12px 36px rgba(0,0,0,0.40)",
-                        display: "grid",
-                        gridTemplateColumns: { xs: "1fr", md: "320px 1fr" },
-                        gap: 3,
-                        alignItems: "center",
-                        color: "white",
-                        transform: mounted ? "translateY(0px)" : "translateY(14px)",
-                        opacity: mounted ? 1 : 0,
-                        transition: "all .9s ease .4s",
-                    }}
-                >
-                    <Box
-                        sx={{
-                            position: "relative",
-                            width: "100%",
-                            height: { xs: 220, md: 260 },
-                            borderRadius: "16px",
-                            overflow: "hidden",
-                            border: "1px solid rgba(255,255,255,0.18)",
-                            boxShadow: "0 8px 22px rgba(0,0,0,0.35)",
-                        }}
-                    >
-                        <Image
-                            src="/history/pabu.jpg"
-                            alt="Pabu the red panda mascot"
-                            fill
-                            style={{ objectFit: "cover" }}
-                        />
-                    </Box>
-
-                    <Box>
-                        <Chip
-                            label="Mascot"
-                            sx={{
-                                height: 30,
-                                fontWeight: 800,
-                                backgroundColor: "var(--accent-color)",
-                                color: "var(--primary-color)",
-                                mb: 1.2,
-                            }}
-                        />
-                        <Typography
-                            variant="h4"
-                            sx={{
-                                fontWeight: 900,
-                                color: "var(--accent-color)",
-                                mb: 1,
-                            }}
-                        >
-                            Pabu!
-                        </Typography>
-                        <Stack spacing={1}>
-                            <Typography sx={{ fontSize: "1.05rem", opacity: 0.95 }}>
-                                • Native to Asia
-                            </Typography>
-                            <Typography sx={{ fontSize: "1.05rem", opacity: 0.95 }}>
-                                • Stands for balance & kindness
-                            </Typography>
-                            <Typography sx={{ fontSize: "1.05rem", opacity: 0.95 }}>
-                                • He helps you find happiness within yourself, while also
-                                teaching you the importance of social relationships with the
-                                people you love
-                            </Typography>
-                        </Stack>
-                    </Box>
                 </Box>
             </Box>
         </Box>

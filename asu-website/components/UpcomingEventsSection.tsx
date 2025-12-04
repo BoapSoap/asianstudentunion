@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
     Box,
     Typography,
@@ -42,6 +43,7 @@ function formatEventDate(dateStr?: string) {
 
 export default function UpcomingEventsSection({ events }: { events: Event[] }) {
     const [openId, setOpenId] = useState<string | null>(null);
+    const router = useRouter();
 
     const toggleOpen = (id: string) => {
         setOpenId((current) => (current === id ? null : id));
@@ -61,10 +63,10 @@ export default function UpcomingEventsSection({ events }: { events: Event[] }) {
 
                 const handleClick = () => {
                     if (href) {
-                        window.location.href = href;
-                    } else {
-                        toggleOpen(event._id);
+                        router.push(href);
+                        return;
                     }
+                    toggleOpen(event._id);
                 };
 
                 const isOpen = openId === event._id;

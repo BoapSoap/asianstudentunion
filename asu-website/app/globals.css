@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --primary-color: #b71c1c;
   --accent-color: #ffd700;
@@ -14,13 +16,12 @@ html, body {
   font-family: var(--font-stack);
   color: #333;
   min-height: 100dvh;
+  background-color: #1a0404;
+  color-scheme: dark;
 }
 
 body {
-  background:
-          linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)),
-          url("/resources/backdrop.webp") center/cover no-repeat fixed;
-  background-color: #0a0a0a;
+  background: transparent;
 }
 
 .navbar {
@@ -32,8 +33,6 @@ body {
   top: 0;
   z-index: 100;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  -webkit-backdrop-filter: blur(6px) saturate(1.2);
-  backdrop-filter: blur(6px) saturate(1.2);
 }
 
 .navbar h1 {
