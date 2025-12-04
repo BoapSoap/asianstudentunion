@@ -11,7 +11,7 @@ type HeroHeaderProps = {
 };
 
 const HeroHeader = ({ titleClassName = "", subtitleClassName = "" }: HeroHeaderProps) => {
-    const containerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLElement>(null!);
 
     return (
         <Box

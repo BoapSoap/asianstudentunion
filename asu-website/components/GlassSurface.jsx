@@ -2,6 +2,34 @@
 
 import { useEffect, useRef, useId } from 'react';
 
+/**
+ * @typedef {object} GlassSurfaceProps
+ * @property {import("react").ReactNode} [children]
+ * @property {number | string} [width]
+ * @property {number | string} [height]
+ * @property {number} [borderRadius]
+ * @property {number} [borderWidth]
+ * @property {number} [brightness]
+ * @property {number} [opacity]
+ * @property {number} [blur]
+ * @property {number} [displace]
+ * @property {number} [backgroundOpacity]
+ * @property {number} [saturation]
+ * @property {number} [distortionScale]
+ * @property {number} [redOffset]
+ * @property {number} [greenOffset]
+ * @property {number} [blueOffset]
+ * @property {'R' | 'G' | 'B' | 'A'} [xChannel]
+ * @property {'R' | 'G' | 'B' | 'A'} [yChannel]
+ * @property {string} [mixBlendMode]
+ * @property {boolean} [forceFallback]
+ * @property {string} [className]
+ * @property {Record<string, any>} [style]
+ */
+
+/**
+ * @param {GlassSurfaceProps} props
+ */
 const GlassSurface = ({
   children,
   width = 200,
