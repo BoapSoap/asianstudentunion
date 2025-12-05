@@ -84,6 +84,7 @@ export const officersQuery = groq`
     sortOrder,
     email,
     instagram,
+    linkedin,
     "imageUrl": image.asset->url
   }
 `;

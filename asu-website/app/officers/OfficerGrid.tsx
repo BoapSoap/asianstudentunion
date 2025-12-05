@@ -26,6 +26,7 @@ type Officer = {
     imageUrl?: string;
     email?: string;
     instagram?: string;
+    linkedin?: string;
 };
 
 export default function OfficerGrid({ officers }: { officers: Officer[] }) {
@@ -37,6 +38,18 @@ export default function OfficerGrid({ officers }: { officers: Officer[] }) {
     );
 
     const selectedOfficer = selectedId ? officerMap.get(selectedId) || null : null;
+    const selectedInstagramUrl =
+        selectedOfficer?.instagram && selectedOfficer.instagram.trim() !== ""
+            ? selectedOfficer.instagram.startsWith("http")
+                ? selectedOfficer.instagram
+                : `https://instagram.com/${selectedOfficer.instagram.replace(/^@/, "")}`
+            : undefined;
+    const selectedLinkedinUrl =
+        selectedOfficer?.linkedin && selectedOfficer.linkedin.trim() !== ""
+            ? selectedOfficer.linkedin.startsWith("http")
+                ? selectedOfficer.linkedin
+                : `https://www.linkedin.com/in/${selectedOfficer.linkedin.replace(/^@/, "")}`
+            : undefined;
 
     const items = useMemo(() => {
         return officers.map((officer, idx) => {
@@ -163,7 +176,9 @@ export default function OfficerGrid({ officers }: { officers: Officer[] }) {
                                     </Typography>
                                 )}
 
-                                {(selectedOfficer.email || selectedOfficer.instagram) && (
+                                {(selectedOfficer.email ||
+                                    selectedInstagramUrl ||
+                                    selectedLinkedinUrl) && (
                                     <Box
                                         sx={{
                                             display: "flex",
@@ -172,14 +187,19 @@ export default function OfficerGrid({ officers }: { officers: Officer[] }) {
                                             flexWrap: "wrap",
                                         }}
                                     >
-                                        {selectedOfficer.instagram && (
+                                        {selectedInstagramUrl && (
                                             <SocialIcon
                                                 network="instagram"
-                                                url={
-                                                    selectedOfficer.instagram.startsWith("http")
-                                                        ? selectedOfficer.instagram
-                                                        : `https://instagram.com/${selectedOfficer.instagram.replace(/^@/, "")}`
-                                                }
+                                                url={selectedInstagramUrl}
+                                                style={{ height: 32, width: 32 }}
+                                                bgColor="var(--accent-color)"
+                                                fgColor="#1a1a1a"
+                                            />
+                                        )}
+                                        {selectedLinkedinUrl && (
+                                            <SocialIcon
+                                                network="linkedin"
+                                                url={selectedLinkedinUrl}
                                                 style={{ height: 32, width: 32 }}
                                                 bgColor="var(--accent-color)"
                                                 fgColor="#1a1a1a"

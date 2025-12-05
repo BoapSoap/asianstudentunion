@@ -18,6 +18,7 @@ type Officer = {
     imageUrl?: string;
     email?: string;
     instagram?: string;
+    linkedin?: string;
 };
 
 export default async function OfficersPage() {

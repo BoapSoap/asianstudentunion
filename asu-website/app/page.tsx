@@ -9,11 +9,9 @@ import {
 } from "../sanity/lib/queries";
 import HomeCarousel from "../components/HomeCarousel";
 import UpcomingEventsSection from "../components/UpcomingEventsSection";
-import GlassSurface from "../components/GlassSurface";
 import { Inter, Roboto_Mono } from "next/font/google";
 import Link from "next/link";
 import HeroHeader from "../components/HeroHeader";
-import TiltedCard from "../components/TiltedCard";
 
 // make this page always dynamic / non-cached
 export const revalidate = 0;
@@ -123,147 +121,117 @@ export default async function HomePage() {
                         Featured Event
                     </Typography>
 
-                    <TiltedCard
-                        containerWidth="100%"
-                        containerHeight="100%"
-                        imageWidth="100%"
-                        imageHeight="100%"
-                        rotateAmplitude={5}
-                        scaleOnHover={1.01}
-                        className="featured-tilt"
+                    <Box
+                        sx={{
+                            display: "flex",
+                            flexDirection: { xs: "column", md: "row" },
+                            width: "100%",
+                            borderRadius: "24px",
+                            overflow: "hidden",
+                            background: "rgba(255,255,255,0.14)",
+                            border: "1px solid rgba(255,255,255,0.22)",
+                            boxShadow: "0 12px 38px rgba(0,0,0,0.28)",
+                            backdropFilter: "blur(12px)",
+                            WebkitBackdropFilter: "blur(12px)",
+                        }}
                     >
-                        <GlassSurface
-                            width="100%"
-                            height="100%"
-                            borderRadius={28}
-                            forceFallback
-                            displace={0}
-                            distortionScale={-60}
-                            redOffset={0}
-                            greenOffset={8}
-                            blueOffset={12}
-                            brightness={58}
-                            opacity={0.86}
-                            backgroundOpacity={0.12}
-                            mixBlendMode="normal"
-                            saturation={1.05}
+                        <CardMedia
+                            component="img"
+                            image={featured.imageUrl || "/mainpagephotos/bonfiremain.jpg"}
+                            alt={featured.title}
+                            sx={{
+                                width: { xs: "100%", md: "48%" },
+                                objectFit: "cover",
+                                minHeight: { xs: 220, md: "100%" },
+                            }}
+                        />
+
+                        <Box
+                            sx={{
+                                flex: 1,
+                                color: "white",
+                                p: { xs: 2.5, md: 3.25 },
+                                position: "relative",
+                                background:
+                                    "radial-gradient(circle at 10% 20%, rgba(255,255,255,0.08), transparent 35%), rgba(0,0,0,0.35)",
+                            }}
                         >
-                            <Box
+                            <Chip
+                                label="Featured"
                                 sx={{
-                                    display: "flex",
-                                    flexDirection: { xs: "column", md: "row" },
-                                    width: "100%",
-                                    height: "100%",
-                                    borderRadius: "22px",
-                                    overflow: "hidden",
+                                    backgroundColor: "var(--accent-color)",
+                                    color: "var(--primary-color)",
+                                    fontWeight: 700,
+                                    mb: 1,
+                                }}
+                            />
+
+                            <Typography
+                                component="h2"
+                                sx={{
+                                    fontWeight: 800,
+                                    fontSize: { xs: "1.5rem", md: "1.85rem" },
+                                    mb: 1,
+                                    color: "var(--accent-color)",
+                                    textShadow: "0 1px 8px rgba(0,0,0,0.35)",
                                 }}
                             >
-                                <CardMedia
-                                    component="img"
-                                    image={
-                                        featured.imageUrl || "/mainpagephotos/bonfiremain.jpg"
-                                    }
-                                    alt={featured.title}
-                                    sx={{
-                                        width: { xs: "100%", md: "50%" },
-                                        objectFit: "cover",
-                                        minHeight: { xs: 220, md: "100%" },
-                                    }}
-                                />
+                                {featured.title}
+                            </Typography>
 
-                                <Box
+                            <Typography
+                                sx={{
+                                    display: "flex",
+                                    gap: 1,
+                                    alignItems: "center",
+                                    color: "rgba(255,255,255,0.95)",
+                                    mb: 0.5,
+                                    fontWeight: 500,
+                                    fontSize: { xs: "1rem", md: "1.05rem" },
+                                }}
+                            >
+                                {featured.date && <span>{formatEventDate(featured.date)}</span>}
+                                {featured.time && (
+                                    <>
+                                        <span>•</span>
+                                        <span>{featured.time}</span>
+                                    </>
+                                )}
+                            </Typography>
+
+                            {featured.location && (
+                                <Typography
                                     sx={{
-                                        flex: 1,
-                                        color: "white",
-                                        p: { xs: 2.5, md: 3 },
-                                        position: "relative",
-                                        zIndex: 2,
+                                        color: "rgba(255,255,255,0.95)",
+                                        mb: 1.5,
+                                        fontWeight: 500,
+                                        fontSize: { xs: "1rem", md: "1.05rem" },
                                     }}
                                 >
-                                    <Chip
-                                        label="Featured"
+                                    {featured.location}
+                                </Typography>
+                            )}
+
+                            {typeof featured.slug === "string" && featured.slug.trim() !== "" && (
+                                <Link href={`/events/${featured.slug}`} style={{ textDecoration: "none" }}>
+                                    <Button
                                         sx={{
                                             backgroundColor: "var(--accent-color)",
                                             color: "var(--primary-color)",
-                                            fontWeight: 700,
-                                            mb: 1,
-                                        }}
-                                    />
-
-                                    <Typography
-                                        component="h2"
-                                        sx={{
                                             fontWeight: 800,
-                                            fontSize: { xs: "1.5rem", md: "1.85rem" },
-                                            mb: 1,
-                                            color: "var(--accent-color)",
-                                            textShadow: "0 1px 8px rgba(0,0,0,0.35)",
+                                            textTransform: "none",
+                                            px: 2.5,
+                                            py: 1,
+                                            borderRadius: 999,
+                                            "&:hover": { backgroundColor: "#ffdc55" },
                                         }}
                                     >
-                                        {featured.title}
-                                    </Typography>
-
-                                    <Typography
-                                        sx={{
-                                            display: "flex",
-                                            gap: 1,
-                                            alignItems: "center",
-                                            color: "rgba(255,255,255,0.95)",
-                                            mb: 0.5,
-                                            fontWeight: 500,
-                                            fontSize: { xs: "1rem", md: "1.05rem" },
-                                        }}
-                                    >
-                                        {featured.date && <span>{formatEventDate(featured.date)}</span>}
-                                        {featured.time && (
-                                            <>
-                                                <span>•</span>
-                                                <span>{featured.time}</span>
-                                            </>
-                                        )}
-                                    </Typography>
-
-                                    {featured.location && (
-                                        <Typography
-                                            sx={{
-                                                color: "rgba(255,255,255,0.95)",
-                                                mb: 1.5,
-                                                fontWeight: 500,
-                                                fontSize: { xs: "1rem", md: "1.05rem" },
-                                            }}
-                                        >
-                                            {featured.location}
-                                        </Typography>
-                                    )}
-
-                                    {typeof featured.slug === "string" &&
-                                        featured.slug.trim() !== "" && (
-                                            <Link
-                                                href={`/events/${featured.slug}`}
-                                                style={{ textDecoration: "none" }}
-                                            >
-                                                <Button
-                                                    sx={{
-                                                        backgroundColor: "var(--accent-color)",
-                                                        color: "var(--primary-color)",
-                                                        fontWeight: 800,
-                                                        textTransform: "none",
-                                                        px: 2.5,
-                                                        py: 1,
-                                                        borderRadius: 999,
-                                                        position: "relative",
-                                                        zIndex: 3,
-                                                        "&:hover": { backgroundColor: "#ffdc55" },
-                                                    }}
-                                                >
-                                                    Learn More
-                                                </Button>
-                                            </Link>
-                                        )}
-                                </Box>
-                            </Box>
-                        </GlassSurface>
-                    </TiltedCard>
+                                        Learn More
+                                    </Button>
+                                </Link>
+                            )}
+                        </Box>
+                    </Box>
                 </Box>
             )}
 

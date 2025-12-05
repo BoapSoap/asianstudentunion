@@ -194,3 +194,11 @@
 .chroma-detail {
   display: none;
 }
+
+/* On small screens (mobile), disable the grayscale overlay so cards stay in full color. */
+@media (max-width: 768px) {
+  .chroma-overlay,
+  .chroma-fade {
+    display: none;
+  }
+}

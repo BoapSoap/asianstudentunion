@@ -61,6 +61,12 @@ export default defineType({
             type: "string",
             description: "Optional, e.g. @asf_officer. Shown only if filled in.",
         }),
+        defineField({
+            name: "linkedin",
+            title: "LinkedIn URL or Handle",
+            type: "string",
+            description: "Optional. Accepts full URL or handle (we will build https://www.linkedin.com/in/{handle}).",
+        }),
 
         defineField({
             name: "bio",
