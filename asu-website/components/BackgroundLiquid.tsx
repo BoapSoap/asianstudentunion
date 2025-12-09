@@ -1,26 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import LiquidEther from "./LiquidEther";
 
 export default function BackgroundLiquid() {
+    const envAllows =
+        typeof process === "undefined" ||
+        process.env.NEXT_PUBLIC_ENABLE_LIQUID !== "false";
     const [enabled, setEnabled] = useState(true);
     const [visible, setVisible] = useState(true);
+    const [ready, setReady] = useState(false);
+    const [resolution, setResolution] = useState(0.12);
+    const pathname = usePathname();
+
+    const isHeavyRoute = useMemo(() => false, [pathname]);
+
+    useEffect(() => {
+        // defer mount so main content can settle first
+        const timeout = setTimeout(() => setReady(true), 800);
+        return () => clearTimeout(timeout);
+    }, []);
 
     useEffect(() => {
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
         const smallScreen = window.matchMedia("(max-width: 768px)");
+        const lowPower = window.matchMedia("(prefers-reduced-data: reduce)");
+        const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+        const res = dpr > 1.5 ? 0.07 : 0.1; // drop internal resolution on high-DPI screens
+        if (resolution !== res) {
+            const id = requestAnimationFrame(() => setResolution(res));
+            return () => cancelAnimationFrame(id);
+        }
 
-        const update = () => setEnabled(!(reduceMotion.matches || smallScreen.matches));
+        const update = () =>
+            setEnabled(!(reduceMotion.matches || smallScreen.matches || lowPower.matches));
         update();
 
         reduceMotion.addEventListener("change", update);
         smallScreen.addEventListener("change", update);
+        lowPower.addEventListener("change", update);
         return () => {
             reduceMotion.removeEventListener("change", update);
             smallScreen.removeEventListener("change", update);
+            lowPower.removeEventListener("change", update);
         };
-    }, []);
+    }, [resolution]);
 
     useEffect(() => {
         const handleVisibility = () => setVisible(!document.hidden);
@@ -29,7 +54,7 @@ export default function BackgroundLiquid() {
         return () => document.removeEventListener("visibilitychange", handleVisibility);
     }, []);
 
-    if (!enabled || !visible) return null;
+    if (!envAllows || !enabled || !visible || isHeavyRoute || !ready) return null;
 
     return (
         <div
@@ -46,13 +71,13 @@ export default function BackgroundLiquid() {
         >
             <LiquidEther
                 colors={["#340404", "#7a0c0c", "#c01717", "#ffb300", "#ffd75e"]}
-                mouseForce={9}
-                cursorSize={56}
-                resolution={0.18}
+                mouseForce={7}
+                cursorSize={48}
+                resolution={resolution}
                 isBounce
                 autoDemo={false}
-                autoSpeed={0.16}
-                autoIntensity={0.55}
+                autoSpeed={0.09}
+                autoIntensity={0.32}
                 takeoverDuration={0.25}
                 autoResumeDelay={3000}
                 autoRampDuration={0.6}

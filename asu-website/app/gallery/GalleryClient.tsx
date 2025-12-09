@@ -1,17 +1,17 @@
 // app/gallery/GalleryClient.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Box,
     Typography,
     Card,
     CardContent,
-    CardMedia,
     Button,
     TextField,
     MenuItem,
 } from "@mui/material";
+import Image from "next/image";
 
 type Album = {
     _id: string;
@@ -42,6 +42,16 @@ function extractYear(dateStr?: string): string | null {
     return year || null;
 }
 
+function isValidImageUrl(src?: string): boolean {
+    if (!src) return false;
+    try {
+        const url = new URL(src);
+        return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+        return false;
+    }
+}
+
 type GalleryClientProps = {
     albums: Album[];
 };
@@ -49,6 +59,8 @@ type GalleryClientProps = {
 export default function GalleryClient({ albums }: GalleryClientProps) {
     const [sortOption, setSortOption] = useState<SortOption>("newest");
     const [yearFilter, setYearFilter] = useState<string>("all");
+    const [hoveredId, setHoveredId] = useState<string | null>(null);
+    const [initialized, setInitialized] = useState(false);
 
     const yearOptions = useMemo(() => {
         const years = new Set<string>();
@@ -58,6 +70,20 @@ export default function GalleryClient({ albums }: GalleryClientProps) {
         });
         return Array.from(years).sort((a, b) => Number(b) - Number(a));
     }, [albums]);
+
+    const latestYear = yearOptions[0] ?? null;
+
+    // Default to the latest year to avoid rendering every album at once
+    useEffect(() => {
+        if (!initialized && latestYear) {
+            const id = setTimeout(() => {
+                setYearFilter(latestYear);
+                setInitialized(true);
+            }, 0);
+            return () => clearTimeout(id);
+        }
+        return undefined;
+    }, [latestYear, initialized]);
 
     const visibleAlbums = useMemo(() => {
         let list = [...albums];
@@ -246,6 +272,29 @@ export default function GalleryClient({ albums }: GalleryClientProps) {
                                     </MenuItem>
                                 ))}
                             </TextField>
+
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => setYearFilter(latestYear ?? "all")}
+                                disabled={!latestYear || yearFilter === latestYear}
+                                sx={{
+                                    borderColor: "rgba(255,255,255,0.5)",
+                                    color: "white",
+                                    textTransform: "none",
+                                    px: 2.4,
+                                    "&:hover": {
+                                        borderColor: "var(--accent-color)",
+                                        backgroundColor: "rgba(255,255,255,0.08)",
+                                    },
+                                    "&.Mui-disabled": {
+                                        color: "rgba(255,255,255,0.5)",
+                                        borderColor: "rgba(255,255,255,0.2)",
+                                    },
+                                }}
+                            >
+                                Show latest year
+                            </Button>
                         </Box>
                     </Box>
                 )}
@@ -276,27 +325,42 @@ export default function GalleryClient({ albums }: GalleryClientProps) {
                                 sx={{
                                     width: "100%",
                                     background: "rgba(255,255,255,0.16)",
-                                    backdropFilter: "blur(12px)",
+                                    backdropFilter: "blur(8px)",
                                     borderRadius: "20px",
                                     overflow: "hidden",
                                     border: "1px solid rgba(255,255,255,0.35)",
-                                    boxShadow: "0 10px 26px rgba(0,0,0,0.35)",
+                                    boxShadow: "0 10px 20px rgba(0,0,0,0.28)",
                                     color: "white",
                                     display: "flex",
                                     flexDirection: "column",
+                                    contentVisibility: "auto",
+                                    containIntrinsicSize: "320px 360px",
+                                    transition: "transform 120ms ease, box-shadow 120ms ease",
+                                    transform:
+                                        hoveredId === album._id ? "translateY(-2px)" : "translateY(0)",
+                                    willChange: "transform",
                                 }}
+                                onMouseEnter={() => setHoveredId(album._id)}
+                                onMouseLeave={() => setHoveredId((id) => (id === album._id ? null : id))}
                             >
-                                {album.coverImageUrl && (
-                                    <CardMedia
-                                        component="img"
-                                        image={album.coverImageUrl}
-                                        alt={album.title}
+                                {isValidImageUrl(album.coverImageUrl) && (
+                                    <Box
                                         sx={{
+                                            position: "relative",
                                             height: 210,
-                                            objectFit: "cover",
-                                            objectPosition: "center center",
+                                            backgroundColor: "rgba(0,0,0,0.24)",
                                         }}
-                                    />
+                                    >
+                                        <Image
+                                            src={album.coverImageUrl}
+                                            alt={album.title}
+                                            fill
+                                            sizes="(max-width: 600px) 90vw, (max-width: 900px) 45vw, 320px"
+                                            style={{ objectFit: "cover", objectPosition: "center" }}
+                                            loading="lazy"
+                                            priority={false}
+                                        />
+                                    </Box>
                                 )}
 
                                 <CardContent

@@ -1,11 +1,24 @@
 // app/officers/page.tsx
 import { Box, Typography } from "@mui/material";
-import { client } from "../../sanity/lib/client";
-import { officersQuery } from "../../sanity/lib/queries";
+import { supabase } from "../../lib/supabaseClient";
 import OfficerGrid from "./OfficerGrid";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
+
+type OfficerRow = {
+    id: string;
+    name: string;
+    role: string;
+    major: string | null;
+    year: string | null;
+    bio: string | null;
+    sort_order: number | null;
+    image_url: string | null;
+    email: string | null;
+    instagram: string | null;
+    linkedin: string | null;
+};
 
 type Officer = {
     _id: string;
@@ -22,11 +35,30 @@ type Officer = {
 };
 
 export default async function OfficersPage() {
-    const officers = await client.fetch<Officer[]>(
-        officersQuery,
-        {},
-        { cache: "no-store" }
-    );
+    const { data: officerRows, error } = await supabase
+        .from("officers")
+        .select("*")
+        .order("sort_order", { ascending: true, nullsFirst: true })
+        .order("role", { ascending: true })
+        .order("name", { ascending: true });
+
+    if (error) {
+        console.error("Failed to load officers", error);
+    }
+
+    const officers: Officer[] = (officerRows ?? []).map((row: OfficerRow) => ({
+        _id: row.id,
+        name: row.name,
+        role: row.role,
+        major: row.major ?? undefined,
+        year: row.year ?? undefined,
+        bio: row.bio ?? undefined,
+        sortOrder: row.sort_order ?? undefined,
+        imageUrl: row.image_url ?? undefined,
+        email: row.email ?? undefined,
+        instagram: row.instagram ?? undefined,
+        linkedin: row.linkedin ?? undefined,
+    }));
 
     return (
         <Box

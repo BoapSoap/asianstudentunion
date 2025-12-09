@@ -12,10 +12,7 @@ type HomeCarouselProps = {
 
 export default function HomeCarousel({ images }: HomeCarouselProps) {
     const [index, setIndex] = useState(0);
-
-    if (!images || images.length === 0) {
-        return null;
-    }
+    const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
 
     const nextSlide = () => {
         setIndex((prev) => (prev + 1) % images.length);
@@ -26,11 +23,30 @@ export default function HomeCarousel({ images }: HomeCarouselProps) {
     };
 
     useEffect(() => {
+        if (!images || images.length === 0) return undefined;
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const update = () => setAutoPlayEnabled(!reduceMotion.matches && !document.hidden);
+        update();
+        const handleVisibility = () => update();
+        reduceMotion.addEventListener("change", update);
+        document.addEventListener("visibilitychange", handleVisibility);
+        return () => {
+            reduceMotion.removeEventListener("change", update);
+            document.removeEventListener("visibilitychange", handleVisibility);
+        };
+    }, [images]);
+
+    useEffect(() => {
+        if (!images || images.length === 0 || !autoPlayEnabled) return undefined;
         const id = setInterval(() => {
             setIndex((prev) => (prev + 1) % images.length);
         }, 5000);
         return () => clearInterval(id);
-    }, [images.length]);
+    }, [images, images.length, autoPlayEnabled]);
+
+    if (!images || images.length === 0) {
+        return null;
+    }
 
     return (
         <Box

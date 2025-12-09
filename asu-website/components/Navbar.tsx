@@ -65,9 +65,10 @@ export default function Navbar() {
     const [displayedTitle, setDisplayedTitle] = useState(
         TITLE_SEQUENCE[0].text
     );
-    const [displayedLang, setDisplayedLang] = useState(TITLE_SEQUENCE[0].lang);
 
     const pathname = usePathname();
+
+    const displayedLang = TITLE_SEQUENCE[sequenceIndex].lang;
 
     const navItems = [
         { label: "Upcoming Events", href: "/#events" },
@@ -75,6 +76,8 @@ export default function Navbar() {
         { label: "Officers", href: "/officers" },
         { label: "Gallery", href: "/gallery" },
     ];
+
+    const enableGlassNav = true; // toggle to false to temporarily disable fluid glass
 
     const handleHomeClick =
         (closeDrawer = false) =>
@@ -94,69 +97,42 @@ export default function Navbar() {
 
     // Typewriter / spell-out animation for the navbar title
     useEffect(() => {
-        const entry = TITLE_SEQUENCE[sequenceIndex];
-        const full = entry.text;
-        setDisplayedLang(entry.lang);
-
-        setDisplayedTitle(""); // clear before typing
         let charIndex = 0;
         let dwellTimeout: ReturnType<typeof setTimeout> | undefined;
+        let typingInterval: ReturnType<typeof setInterval> | undefined;
 
-        const typingInterval = setInterval(() => {
-            charIndex += 1;
-            setDisplayedTitle(full.slice(0, charIndex));
+        const kickoff = setTimeout(() => {
+            const entry = TITLE_SEQUENCE[sequenceIndex];
+            const full = entry.text;
 
-            if (charIndex >= full.length) {
-                clearInterval(typingInterval);
-                // pause on the completed word, then move to next sequence item
-                dwellTimeout = setTimeout(() => {
-                    setSequenceIndex(
-                        (prev) => (prev + 1) % TITLE_SEQUENCE.length
-                    );
-                }, 1800);
-            }
-        }, 70); // speed per character
+            setDisplayedTitle(""); // clear before typing
+
+            typingInterval = setInterval(() => {
+                charIndex += 1;
+                setDisplayedTitle(full.slice(0, charIndex));
+
+                if (charIndex >= full.length) {
+                    if (typingInterval) clearInterval(typingInterval);
+                    // pause on the completed word, then move to next sequence item
+                    dwellTimeout = setTimeout(() => {
+                        setSequenceIndex(
+                            (prev) => (prev + 1) % TITLE_SEQUENCE.length
+                        );
+                    }, 1800);
+                }
+            }, 70); // speed per character
+        }, 0);
 
         return () => {
-            clearInterval(typingInterval);
+            clearTimeout(kickoff);
+            if (typingInterval) clearInterval(typingInterval);
             if (dwellTimeout) clearTimeout(dwellTimeout);
         };
     }, [sequenceIndex]);
 
-    return (
-        <AppBar
-            position="sticky"
-            elevation={0}
-            className={NAV_BODY_CLASS}
-            sx={{
-                background: "transparent",
-                boxShadow: "none",
-                top: 6,
-                pt: 0.2,
-                pb: 0.2,
-            }}
-        >
-            <Box
-                sx={{
-                    width: { xs: "calc(100% - 18px)", sm: "calc(100% - 26px)", md: "100%" },
-                    maxWidth: 1180,
-                    mx: "auto",
-                }}
-            >
-                <GlassSurface
-                    width="100%"
-                    height="auto"
-                    borderRadius={30}
-                    backgroundOpacity={0.22}
-                    saturation={1.05}
-                    displace={0}
-                    distortionScale={-80}
-                >
-                    <Box sx={{ px: { xs: 1.4, md: 2.2 }, py: { xs: 0.3, md: 0.5 }, width: "100%" }}>
-                        <Toolbar
-                            disableGutters
-                            sx={{ display: "flex", alignItems: "center", gap: 1.1 }}
-                        >
+    const navContent = (
+        <Box sx={{ px: { xs: 1.4, md: 2.2 }, py: { xs: 0.3, md: 0.5 }, width: "100%" }}>
+            <Toolbar disableGutters sx={{ display: "flex", alignItems: "center", gap: 1.1 }}>
                 {/* MOBILE MENU BUTTON */}
                 <IconButton
                     sx={{ display: { xs: "flex", md: "none" }, color: "#FFD700", mr: 1 }}
@@ -260,9 +236,55 @@ export default function Navbar() {
                         </AnimatedNavButton>
                     ))}
                 </Box>
-                        </Toolbar>
-                    </Box>
+            </Toolbar>
+        </Box>
+    );
+
+    return (
+        <AppBar
+            position="sticky"
+            elevation={0}
+            className={NAV_BODY_CLASS}
+            sx={{
+                background: "transparent",
+                boxShadow: "none",
+                top: 6,
+                pt: 0.2,
+                pb: 0.2,
+            }}
+        >
+            <Box
+                sx={{
+                    width: { xs: "calc(100% - 18px)", sm: "calc(100% - 26px)", md: "100%" },
+                    maxWidth: 1180,
+                    mx: "auto",
+                }}
+            >
+                {enableGlassNav ? (
+                    <GlassSurface
+                        width="100%"
+                        height="auto"
+                        borderRadius={30}
+                        backgroundOpacity={0.22}
+                        saturation={1.05}
+                        displace={0}
+                        distortionScale={-80}
+                    >
+                        {navContent}
                 </GlassSurface>
+                ) : (
+                    <Box
+                        sx={{
+                            width: "100%",
+                            borderRadius: 30,
+                            background: "rgba(0,0,0,0.34)",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            boxShadow: "0 12px 28px rgba(0,0,0,0.32)",
+                        }}
+                    >
+                        {navContent}
+                    </Box>
+                )}
             </Box>
 
             {/* -------- MOBILE DRAWER -------- */}

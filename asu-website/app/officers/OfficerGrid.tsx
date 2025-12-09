@@ -62,12 +62,6 @@ export default function OfficerGrid({ officers }: { officers: Officer[] }) {
                 ? officer.instagram.replace(/^@/, "")
                 : undefined;
 
-            const instagramUrl = instagramHandle
-                ? instagramHandle.startsWith("http")
-                    ? instagramHandle
-                    : `https://instagram.com/${instagramHandle}`
-                : undefined;
-
             const palette = [
                 "#b71c1c",
                 "#d6341f",

@@ -27,8 +27,8 @@ export default function ChromaGrid({
                                        items,
                                        className = "",
                                        radius = 260,
-                                       columns = 3,
-                                       rows = 2,
+                                       columns: _columns = 3,
+                                       rows: _rows = 2,
                                        onSelect,
                                        selectedId = null,
                                    }: Props) {
