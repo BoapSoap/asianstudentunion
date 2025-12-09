@@ -85,8 +85,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const targetEmail = body.targetEmail?.trim().toLowerCase() || null;
-    let targetUserId = body.targetUserId?.trim() || null;
+    const targetEmail = typeof body.targetEmail === "string" ? body.targetEmail.trim().toLowerCase() : null;
+    let targetUserId = typeof body.targetUserId === "string" ? body.targetUserId.trim() : null;
 
     if (!targetUserId && !targetEmail) {
       return NextResponse.json({ error: "targetUserId or targetEmail is required" }, { status: 400 });
