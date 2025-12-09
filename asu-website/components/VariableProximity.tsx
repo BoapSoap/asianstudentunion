@@ -6,6 +6,7 @@ import {
     useRef,
     useEffect,
     useCallback,
+    useState,
     type CSSProperties,
     type RefObject,
     type HTMLAttributes,
@@ -25,18 +26,18 @@ type VariableProximityProps = {
     falloff?: Falloff;
 } & HTMLAttributes<HTMLSpanElement>;
 
-function useAnimationFrame(callback: () => void) {
-    const cb = useCallback(callback, [callback]);
-
+function useAnimationFrame(callback: () => void, isActive: boolean) {
     useEffect(() => {
+        if (!isActive) return;
+
         let frameId: number;
         const loop = () => {
-            cb();
+            callback();
             frameId = requestAnimationFrame(loop);
         };
         frameId = requestAnimationFrame(loop);
         return () => cancelAnimationFrame(frameId);
-    }, [cb]);
+    }, [callback, isActive]);
 }
 
 function useMousePositionRef(containerRef?: RefObject<HTMLElement>) {
@@ -89,6 +90,8 @@ const VariableProximity = forwardRef<HTMLSpanElement, VariableProximityProps>(
         const interpolatedSettingsRef = useRef<string[]>([]);
         const mousePositionRef = useMousePositionRef(containerRef);
         const lastPositionRef = useRef({ x: null as number | null, y: null as number | null });
+        const [isActive, setIsActive] = useState(false);
+        const idleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
         const parsedSettings = useMemo(() => {
             const parseSettings = (settingsStr: string) =>
@@ -127,6 +130,42 @@ const VariableProximity = forwardRef<HTMLSpanElement, VariableProximityProps>(
                     return norm;
             }
         };
+
+        const markActive = useCallback(() => {
+            if (idleTimeoutRef.current) {
+                clearTimeout(idleTimeoutRef.current);
+            }
+            setIsActive((prev) => (prev ? prev : true));
+            idleTimeoutRef.current = setTimeout(() => setIsActive(false), 450);
+        }, []);
+
+        useEffect(
+            () => () => {
+                if (idleTimeoutRef.current) {
+                    clearTimeout(idleTimeoutRef.current);
+                }
+            },
+            [],
+        );
+
+        useEffect(() => {
+            const container = containerRef?.current;
+            if (!container) return;
+
+            const handlePointerMove = () => markActive();
+            const handlePointerEnter = () => markActive();
+            const handlePointerLeave = () => setIsActive(false);
+
+            container.addEventListener("pointermove", handlePointerMove);
+            container.addEventListener("pointerenter", handlePointerEnter);
+            container.addEventListener("pointerleave", handlePointerLeave);
+
+            return () => {
+                container.removeEventListener("pointermove", handlePointerMove);
+                container.removeEventListener("pointerenter", handlePointerEnter);
+                container.removeEventListener("pointerleave", handlePointerLeave);
+            };
+        }, [containerRef, markActive]);
 
         useAnimationFrame(() => {
             if (!containerRef?.current) return;
@@ -171,7 +210,7 @@ const VariableProximity = forwardRef<HTMLSpanElement, VariableProximityProps>(
                 const scale = (1 + falloffValue * 0.18).toFixed(3);
                 letterRef.style.transform = `translateY(-${lift}px) scale(${scale})`;
             });
-        });
+        }, isActive);
 
         const words = label.split(" ");
         let letterIndex = 0;

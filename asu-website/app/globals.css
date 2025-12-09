@@ -16,7 +16,9 @@ html, body {
   font-family: var(--font-stack);
   color: #333;
   min-height: 100dvh;
-  background-color: #1a0404;
+  background: radial-gradient(circle at 18% 18%, rgba(214, 47, 47, 0.32), transparent 42%),
+              radial-gradient(circle at 78% 72%, rgba(255, 134, 134, 0.28), transparent 40%),
+              linear-gradient(145deg, #120404 0%, #1d0505 45%, #2a0606 100%);
   color-scheme: dark;
 }
 

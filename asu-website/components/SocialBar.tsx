@@ -11,7 +11,8 @@ export default function SocialBar() {
 
     // Prevent hydration mismatch
     useEffect(() => {
-        setMounted(true);
+        const id = setTimeout(() => setMounted(true), 0);
+        return () => clearTimeout(id);
     }, []);
 
     // Run mobile check only AFTER mount

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import styles from './LiquidEther.module.css';
+import './LiquidEther.css';
 
 export default function LiquidEther({
   mouseForce = 20,
@@ -1165,5 +1165,11 @@ export default function LiquidEther({
     autoRampDuration
   ]);
 
-  return <div ref={mountRef} className={`${styles.container} ${className || ''}`} style={style} />;
+  return (
+    <div
+      ref={mountRef}
+      className={`liquid-ether-container ${className || ''}`}
+      style={style}
+    />
+  );
 }

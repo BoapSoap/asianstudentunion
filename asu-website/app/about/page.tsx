@@ -117,7 +117,7 @@ export default function AboutPage() {
                         }}
                     >
                         The Asian Student Union at SFSU has always been rooted in community,
-                        activism, and cultural pride. Here's a quick timeline of the moments
+                        activism, and cultural pride. Here&apos;s a quick timeline of the moments
                         that shaped who we are today.
                     </Typography>
                     <Box

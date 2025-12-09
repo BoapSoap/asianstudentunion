@@ -10,14 +10,29 @@ import {
     Stack,
 } from "@mui/material";
 import Link from "next/link";
-import { client } from "../../../sanity/lib/client";
-import { singleEventQuery, allEventsQuery } from "../../../sanity/lib/queries";
+import { supabase } from "../../../lib/supabaseClient";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
+type PortableTextChild = { text?: string };
+type PortableTextBlock = { _key: string; children?: PortableTextChild[] };
+
+type EventRow = {
+    id: string;
+    title: string;
+    slug: string;
+    date: string | null;
+    time: string | null;
+    location: string | null;
+    link: string | null;
+    featured: boolean;
+    image_url: string | null;
+    description: PortableTextBlock[] | null;
+};
+
 type Event = {
-    _id: string;
+    id: string;
     title: string;
     slug?: string;
     date?: string;
@@ -26,7 +41,7 @@ type Event = {
     link?: string;
     featured?: boolean;
     imageUrl?: string;
-    description?: any[];
+    description?: PortableTextBlock[];
 };
 
 function formatEventDate(dateStr?: string) {
@@ -45,14 +60,14 @@ function formatEventDate(dateStr?: string) {
     });
 }
 
-function Description({ blocks }: { blocks?: any[] }) {
+function Description({ blocks }: { blocks?: PortableTextBlock[] }) {
     if (!blocks || !blocks.length) return null;
 
     return (
         <Box sx={{ mt: 2 }}>
             {blocks.map((block) => (
                 <Typography key={block._key} sx={{ mb: 1, color: "white" }}>
-                    {block.children?.map((child: any) => child.text).join("")}
+                    {block.children?.map((child: PortableTextChild) => child?.text ?? "").join("")}
                 </Typography>
             ))}
         </Box>
@@ -86,14 +101,44 @@ export default async function EventPage({
     }
 
     // Fetch the single event by slug PLUS all events for debug
-    const [event, allEvents] = await Promise.all([
-        client.fetch<Event | null>(singleEventQuery, { slug }),
-        client.fetch<Event[]>(allEventsQuery, {}, { cache: "no-store" }),
-    ]);
+    const [{ data: eventRow, error: eventError }, { data: allEvents, error: allEventsError }] =
+        await Promise.all([
+            supabase
+                .from<EventRow>("events")
+                .select("*")
+                .eq("slug", slug)
+                .maybeSingle(),
+            supabase
+                .from<EventRow>("events")
+                .select("slug")
+                .order("slug", { ascending: true }),
+        ]);
+
+    if (eventError) {
+        console.error("Failed to load event", eventError);
+    }
+    if (allEventsError) {
+        console.error("Failed to load events list", allEventsError);
+    }
+
+    const event: Event | null = eventRow
+        ? {
+            id: eventRow.id,
+            title: eventRow.title,
+            slug: eventRow.slug,
+            date: eventRow.date ?? undefined,
+            time: eventRow.time ?? undefined,
+            location: eventRow.location ?? undefined,
+            link: eventRow.link ?? undefined,
+            featured: eventRow.featured,
+            imageUrl: eventRow.image_url ?? undefined,
+            description: eventRow.description ?? undefined,
+        }
+        : null;
 
     if (!event) {
-        // Debug view so we can see what slugs exist in Sanity
-        const availableSlugs = allEvents.map((e) => e.slug);
+        // Debug view so we can see what slugs exist in Supabase
+        const availableSlugs = (allEvents ?? []).map((e) => e.slug);
         return (
             <Box
                 sx={{
@@ -111,7 +156,7 @@ export default async function EventPage({
                         No event found for slug: <code>{slug}</code>
                     </Typography>
                     <Typography sx={{ mb: 1 }}>
-                        Available event slugs from Sanity:
+                        Available event slugs from Supabase:
                     </Typography>
                     <pre
                         style={{

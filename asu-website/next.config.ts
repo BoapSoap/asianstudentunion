@@ -1,32 +1,31 @@
 // next.config.ts
 import type { NextConfig } from "next";
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseHost = (() => {
+    try {
+        return supabaseUrl ? new URL(supabaseUrl).hostname : undefined;
+    } catch {
+        return undefined;
+    }
+})();
+
 const nextConfig: NextConfig = {
     images: {
         remotePatterns: [
+            ...(supabaseHost
+                ? [
+                      {
+                          protocol: "https",
+                          hostname: supabaseHost,
+                      },
+                  ]
+                : []),
             {
                 protocol: "https",
-                hostname: "cdn.sanity.io",
+                hostname: "**.supabase.co",
             },
         ],
-    },
-    async rewrites() {
-        const studioHost =
-            process.env.NEXT_PUBLIC_STUDIO_DOMAIN || "studio.asianstudentunion.org";
-
-        return [
-            {
-                source: "/",
-                has: [{ type: "host", value: studioHost }],
-                destination: "/studio",
-            },
-            {
-                // Rewrite everything on the studio host except Next.js internals/assets to /studio/*
-                source: "/:path((?!_next/|api/|resources/|favicon\\.ico).*)",
-                has: [{ type: "host", value: studioHost }],
-                destination: "/studio/:path",
-            },
-        ];
     },
 };
 

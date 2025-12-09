@@ -1,12 +1,7 @@
 // app/page.tsx
 
 import { Box, Typography, Button, CardMedia, Chip } from "@mui/material";
-import { client } from "../sanity/lib/client";
-import {
-    allEventsQuery,
-    featuredEventQuery,
-    homeCarouselImagesQuery,
-} from "../sanity/lib/queries";
+import { supabase } from "../lib/supabaseClient";
 import HomeCarousel from "../components/HomeCarousel";
 import UpcomingEventsSection from "../components/UpcomingEventsSection";
 import { Inter, Roboto_Mono } from "next/font/google";
@@ -16,6 +11,9 @@ import HeroHeader from "../components/HeroHeader";
 // make this page always dynamic / non-cached
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
+
+type PortableTextChild = { text?: string };
+type PortableTextBlock = { _key?: string; children?: PortableTextChild[] };
 
 // Inter for big hero headline
 const heroTitleFont = Inter({
@@ -29,10 +27,10 @@ const heroSubFont = Roboto_Mono({
     weight: ["400"],
 });
 
-function getFeaturedSummary(description?: any[]) {
+function getFeaturedSummary(description?: PortableTextBlock[]) {
     const text =
         description?.[0]?.children
-            ?.map((c: any) => c?.text || "")
+            ?.map((c: PortableTextChild) => c?.text || "")
             .join("")
             .trim() || "";
     if (!text) return "Join us for this special event.";
@@ -40,8 +38,22 @@ function getFeaturedSummary(description?: any[]) {
     return text.length > limit ? `${text.slice(0, limit).trimEnd()}…` : text;
 }
 
+type EventRow = {
+    id: string;
+    title: string;
+    date: string | null;
+    time: string | null;
+    location: string | null;
+    featured: boolean;
+    link: string | null;
+    image_url: string | null;
+    slug: string;
+    description: PortableTextBlock[] | null;
+};
+
 type Event = {
     _id: string;
+    id?: string;
     title: string;
     date?: string;
     time?: string;
@@ -50,20 +62,24 @@ type Event = {
     link?: string;
     imageUrl?: string;
     slug?: string;
-    description?: any[];
+    description?: PortableTextBlock[];
 };
 
-type CarouselImage = {
-    _id: string;
-    imageUrl: string;
-    alt?: string;
+type CarouselImageRow = {
+    id: string;
+    image_url: string;
+    alt: string | null;
 };
 
 function formatEventDate(dateStr?: string) {
     if (!dateStr) return "";
 
-    const [year, month, day] = dateStr.split("-").map(Number);
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+
+    const [year, month, day] = parts.map(Number);
     const d = new Date(year, month - 1, day);
+    if (Number.isNaN(d.getTime())) return dateStr;
 
     return d.toLocaleDateString("en-US", {
         month: "short",
@@ -73,19 +89,48 @@ function formatEventDate(dateStr?: string) {
 }
 
 export default async function HomePage() {
-    const [events, featured, carouselEntries] = await Promise.all([
-        client.fetch<Event[]>(allEventsQuery, {}, { cache: "no-store" }),
-        client.fetch<Event | null>(featuredEventQuery, {}, { cache: "no-store" }),
-        client.fetch<CarouselImage[]>(homeCarouselImagesQuery, {}, {
-            cache: "no-store",
-        }),
-    ]);
+    const [{ data: eventsData, error: eventsError }, { data: carouselData, error: carouselError }] =
+        await Promise.all([
+            supabase
+                .from("events")
+                .select("*")
+                .order("date", { ascending: true }),
+            supabase
+                .from("home_carousel_images")
+                .select("*")
+                .order("sort_order", { ascending: true, nullsFirst: true })
+                .order("created_at", { ascending: true }),
+        ]);
 
+    if (eventsError) {
+        console.error("Failed to load events from Supabase", eventsError);
+    }
+    if (carouselError) {
+        console.error("Failed to load home carousel images from Supabase", carouselError);
+    }
+
+    const events: Event[] = (eventsData ?? []).map((row: EventRow) => ({
+        _id: row.id,
+        id: row.id,
+        title: row.title,
+        date: row.date ?? undefined,
+        time: row.time ?? undefined,
+        location: row.location ?? undefined,
+        featured: row.featured,
+        link: row.link ?? undefined,
+        imageUrl: row.image_url ?? undefined,
+        slug: row.slug,
+        description: row.description ?? undefined,
+    }));
+
+    const featured = events.find((e) => e.featured) || null;
     const upcomingEvents: Event[] = featured
         ? events.filter((e) => e._id !== featured._id)
         : events;
 
-    const carouselImages = (carouselEntries || []).map((img) => img.imageUrl);
+    const carouselImages = (carouselData ?? [])
+        .map((img: CarouselImageRow) => img.image_url)
+        .filter(Boolean);
 
     return (
         <Box

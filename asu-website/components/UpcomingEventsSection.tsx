@@ -12,6 +12,9 @@ import {
     Divider,
 } from "@mui/material";
 
+type PortableTextChild = { text?: string };
+type PortableTextBlock = { _key?: string; children?: PortableTextChild[] };
+
 type Event = {
     _id: string;
     title: string;
@@ -22,7 +25,7 @@ type Event = {
     link?: string;
     imageUrl?: string;
     slug?: string;
-    description?: any[];
+    description?: PortableTextBlock[];
 };
 
 function formatEventDate(dateStr?: string) {
@@ -128,13 +131,13 @@ export default function UpcomingEventsSection({ events }: { events: Event[] }) {
                                         }}
                                     >
                                         {event.description && event.description.length > 0 ? (
-                                            event.description.map((block: any) => (
+                                            event.description.map((block: PortableTextBlock) => (
                                                 <Typography
                                                     key={block._key}
                                                     sx={{ mb: 1, color: "white" }}
                                                 >
                                                     {block.children
-                                                        ?.map((child: any) => child.text)
+                                                        ?.map((child: PortableTextChild) => child?.text ?? "")
                                                         .join("")}
                                                 </Typography>
                                             ))

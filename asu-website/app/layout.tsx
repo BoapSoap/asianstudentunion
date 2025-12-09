@@ -3,8 +3,8 @@ import "../components/GlassSurface.css";
 import type { Metadata } from "next";
 import Navbar from "../components/Navbar";
 import LayoutWithSocialBar from "../components/LayoutWithSocialBar";
-import BackgroundLiquid from "../components/BackgroundLiquid";
 import EmotionCacheProvider from "./EmotionCacheProvider";
+import PageBackground from "../components/PageBackground";
 
 export const metadata: Metadata = {
     title: "Asian Student Union",
@@ -35,8 +35,8 @@ export default function RootLayout({
         <html lang="en">
         <body suppressHydrationWarning>
         <EmotionCacheProvider>
-            {/* Background liquid effect */}
-            <BackgroundLiquid />
+            {/* Backgrounds: Silk on home, Liquid Ether elsewhere */}
+            <PageBackground />
             {/* Global Navbar */}
             <Navbar />
 
