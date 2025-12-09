@@ -10,7 +10,6 @@ import {
     DialogContent,
     DialogActions,
     Button,
-    CardMedia,
 } from "@mui/material";
 import { SocialIcon } from "react-social-icons";
 import ChromaGrid from "./ChromaGrid";
@@ -147,11 +146,10 @@ export default function OfficerGrid({ officers }: { officers: Officer[] }) {
                         </DialogTitle>
 
                         {selectedOfficer.imageUrl && (
-                            <CardMedia
-                                component="img"
-                                image={selectedOfficer.imageUrl}
+                            <img
+                                src={selectedOfficer.imageUrl}
                                 alt={selectedOfficer.name}
-                                sx={{
+                                style={{
                                     width: "100%",
                                     maxHeight: 360,
                                     objectFit: "contain",

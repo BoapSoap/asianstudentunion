@@ -4,7 +4,6 @@ import {
     Typography,
     Button,
     Card,
-    CardMedia,
     CardContent,
     Chip,
     Stack,
@@ -101,18 +100,13 @@ export default async function EventPage({
     }
 
     // Fetch the single event by slug PLUS all events for debug
-    const [{ data: eventRow, error: eventError }, { data: allEvents, error: allEventsError }] =
-        await Promise.all([
-            supabase
-                .from<EventRow>("events")
-                .select("*")
-                .eq("slug", slug)
-                .maybeSingle(),
-            supabase
-                .from<EventRow>("events")
-                .select("slug")
-                .order("slug", { ascending: true }),
-        ]);
+    const [
+        { data: eventRowRaw, error: eventError },
+        { data: allEventsRaw, error: allEventsError },
+    ] = await Promise.all([
+        supabase.from("events").select("*").eq("slug", slug).maybeSingle(),
+        supabase.from("events").select("slug").order("slug", { ascending: true }),
+    ]);
 
     if (eventError) {
         console.error("Failed to load event", eventError);
@@ -120,6 +114,9 @@ export default async function EventPage({
     if (allEventsError) {
         console.error("Failed to load events list", allEventsError);
     }
+
+    const eventRow = (eventRowRaw ?? null) as EventRow | null;
+    const allEvents = (allEventsRaw ?? []) as { slug: string }[];
 
     const event: Event | null = eventRow
         ? {
@@ -201,11 +198,10 @@ export default async function EventPage({
                 }}
             >
                 {event.imageUrl && (
-                    <CardMedia
-                        component="img"
-                        image={event.imageUrl}
+                    <img
+                        src={event.imageUrl}
                         alt={event.title}
-                        sx={{ maxHeight: 460, objectFit: "cover" }}
+                        style={{ width: "100%", maxHeight: 460, objectFit: "cover", display: "block" }}
                     />
                 )}
 

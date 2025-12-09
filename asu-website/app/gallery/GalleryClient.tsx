@@ -42,7 +42,7 @@ function extractYear(dateStr?: string): string | null {
     return year || null;
 }
 
-function isValidImageUrl(src?: string): boolean {
+function isValidImageUrl(src?: string | null): src is string {
     if (!src) return false;
     try {
         const url = new URL(src);
@@ -319,7 +319,11 @@ export default function GalleryClient({ albums }: GalleryClientProps) {
                             mx: "auto",
                         }}
                     >
-                        {visibleAlbums.map((album) => (
+                        {visibleAlbums.map((album) => {
+                            const coverSrc = album.coverImageUrl ?? null;
+                            const hasCover = isValidImageUrl(coverSrc);
+
+                            return (
                             <Card
                                 key={album._id}
                                 sx={{
@@ -343,7 +347,7 @@ export default function GalleryClient({ albums }: GalleryClientProps) {
                                 onMouseEnter={() => setHoveredId(album._id)}
                                 onMouseLeave={() => setHoveredId((id) => (id === album._id ? null : id))}
                             >
-                                {isValidImageUrl(album.coverImageUrl) && (
+                                {hasCover && (
                                     <Box
                                         sx={{
                                             position: "relative",
@@ -352,7 +356,7 @@ export default function GalleryClient({ albums }: GalleryClientProps) {
                                         }}
                                     >
                                         <Image
-                                            src={album.coverImageUrl}
+                                            src={coverSrc}
                                             alt={album.title}
                                             fill
                                             sizes="(max-width: 600px) 90vw, (max-width: 900px) 45vw, 320px"
@@ -432,7 +436,8 @@ export default function GalleryClient({ albums }: GalleryClientProps) {
                                     </Box>
                                 </CardContent>
                             </Card>
-                        ))}
+                        );
+                        })}
                     </Box>
                 )}
             </Box>

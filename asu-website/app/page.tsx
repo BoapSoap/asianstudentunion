@@ -1,6 +1,6 @@
 // app/page.tsx
 
-import { Box, Typography, Button, CardMedia, Chip } from "@mui/material";
+import { Box, Typography, Button, Chip } from "@mui/material";
 import { supabase } from "../lib/supabaseClient";
 import HomeCarousel from "../components/HomeCarousel";
 import UpcomingEventsSection from "../components/UpcomingEventsSection";
@@ -180,14 +180,14 @@ export default async function HomePage() {
                             WebkitBackdropFilter: "blur(12px)",
                         }}
                     >
-                        <CardMedia
-                            component="img"
-                            image={featured.imageUrl || "/mainpagephotos/bonfiremain.jpg"}
+                        <img
+                            src={featured.imageUrl || "/mainpagephotos/bonfiremain.jpg"}
                             alt={featured.title}
-                            sx={{
-                                width: { xs: "100%", md: "48%" },
+                            style={{
+                                width: "100%",
+                                maxWidth: "48%",
                                 objectFit: "cover",
-                                minHeight: { xs: 220, md: "100%" },
+                                minHeight: 220,
                             }}
                         />
 

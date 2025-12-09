@@ -35,7 +35,7 @@ export default function RootLayout({
         <html lang="en">
         <body suppressHydrationWarning>
         <EmotionCacheProvider>
-            {/* Backgrounds: Silk on home, Liquid Ether elsewhere */}
+            {/* Animated background (Liquid Ether) */}
             <PageBackground />
             {/* Global Navbar */}
             <Navbar />
