@@ -9,28 +9,39 @@ export async function middleware(req: NextRequest) {
   // First, handle OAuth callback codes explicitly so the session is set before any other checks.
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state");
+  const isAdminRoute = req.nextUrl.pathname.startsWith("/admin");
+
   if (code) {
     await supabase.auth.exchangeCodeForSession(code);
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.searchParams.delete("code");
     redirectUrl.searchParams.delete("state");
+
+    // If the callback landed on the site root, send users to /admin after session exchange.
+    if (redirectUrl.pathname === "/") {
+      redirectUrl.pathname = "/admin";
+    }
+
     return NextResponse.redirect(redirectUrl, { headers: res.headers });
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  if (isAdminRoute) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  if (!session && req.nextUrl.pathname.startsWith("/admin")) {
-    const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = "/adminlogin";
-    redirectUrl.search = "";
-    return NextResponse.redirect(redirectUrl);
+    if (!session) {
+      const redirectUrl = req.nextUrl.clone();
+      redirectUrl.pathname = "/adminlogin";
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 
   return res;
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  // Run on all routes so we can catch Supabase OAuth callbacks even if they land on "/".
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
