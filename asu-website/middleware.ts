@@ -9,7 +9,10 @@ export async function middleware(req: NextRequest) {
   // First, handle OAuth callback codes explicitly so the session is set before any other checks.
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state");
-  const isAdminRoute = req.nextUrl.pathname.startsWith("/admin");
+  // Admin pages live under /admin, but exclude the public login page.
+  const isAdminRoute =
+    req.nextUrl.pathname.startsWith("/admin") &&
+    !req.nextUrl.pathname.startsWith("/adminlogin");
 
   if (code) {
     await supabase.auth.exchangeCodeForSession(code);
