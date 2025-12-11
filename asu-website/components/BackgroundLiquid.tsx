@@ -4,6 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import LiquidEther from "./LiquidEther";
 
+function canUseWebGL() {
+    try {
+        const canvas = document.createElement("canvas");
+        return (
+            !!window.WebGLRenderingContext &&
+            (canvas.getContext("webgl") || canvas.getContext("experimental-webgl"))
+        );
+    } catch (e) {
+        return false;
+    }
+}
+
 export default function BackgroundLiquid() {
     const envAllows =
         typeof process === "undefined" ||
@@ -13,6 +25,7 @@ export default function BackgroundLiquid() {
     const [ready, setReady] = useState(false);
     const [resolution, setResolution] = useState(0.12);
     const pathname = usePathname();
+    const webglSupported = useMemo(() => canUseWebGL(), []);
 
     const isHeavyRoute = useMemo(() => false, [pathname]);
 
@@ -54,7 +67,7 @@ export default function BackgroundLiquid() {
         return () => document.removeEventListener("visibilitychange", handleVisibility);
     }, []);
 
-    if (!envAllows || !enabled || !visible || isHeavyRoute || !ready) return null;
+    if (!envAllows || !enabled || !visible || isHeavyRoute || !ready || !webglSupported) return null;
 
     return (
         <div
@@ -69,19 +82,21 @@ export default function BackgroundLiquid() {
                     "radial-gradient(circle at 18% 18%, rgba(214, 47, 47, 0.35), transparent 46%), radial-gradient(circle at 78% 72%, rgba(255, 134, 134, 0.3), transparent 45%), linear-gradient(145deg, #1a0404 0%, #240303 45%, #2d0202 100%), #240303",
             }}
         >
-            <LiquidEther
-                colors={["#340404", "#7a0c0c", "#c01717", "#ffb300", "#ffd75e"]}
-                mouseForce={7}
-                cursorSize={48}
-                resolution={resolution}
-                isBounce
-                autoDemo={false}
-                autoSpeed={0.09}
-                autoIntensity={0.32}
-                takeoverDuration={0.25}
-                autoResumeDelay={3000}
-                autoRampDuration={0.6}
-            />
+            {webglSupported ? (
+                <LiquidEther
+                    colors={["#340404", "#7a0c0c", "#c01717", "#ffb300", "#ffd75e"]}
+                    mouseForce={7}
+                    cursorSize={48}
+                    resolution={resolution}
+                    isBounce
+                    autoDemo={false}
+                    autoSpeed={0.09}
+                    autoIntensity={0.32}
+                    takeoverDuration={0.25}
+                    autoResumeDelay={3000}
+                    autoRampDuration={0.6}
+                />
+            ) : null}
         </div>
     );
 }
