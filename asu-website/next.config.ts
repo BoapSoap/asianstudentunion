@@ -32,6 +32,10 @@ const nextConfig: NextConfig = {
     images: {
         remotePatterns,
     },
+    turbopack: {
+        // Explicitly pin the workspace root to avoid multi-lockfile warning in nested repo
+        root: __dirname,
+    },
 };
 
 export default nextConfig;

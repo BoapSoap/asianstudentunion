@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
+import { createSupabaseMiddlewareClient } from "@/lib/supabaseServer";
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+  const supabase = createSupabaseMiddlewareClient(req, res);
 
   // First, handle OAuth callback codes explicitly so the session is set before any other checks.
   const code = req.nextUrl.searchParams.get("code");
