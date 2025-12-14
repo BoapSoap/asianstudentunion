@@ -33,8 +33,13 @@ export default function LayoutWithSocialBar({
                         color: "rgba(255,255,255,0.62)",
                         letterSpacing: "0.01em",
                         opacity: 0.78,
+                        flexDirection: "column",
                     }}
                 >
+                    <span>
+                        Copyright © 2025 Asian Student Union | All rights
+                        reserved.
+                    </span>
                     <span>Designed and built by Anmol Tadikonda.</span>
                 </div>
             )}
