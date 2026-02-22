@@ -3,12 +3,14 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabaseServer";
 import type { ProfileRole } from "@/lib/getCurrentProfile";
 import { slugifyTitle } from "@/lib/slugify";
+import { pacificDateTimeInputToUtcIso } from "@/lib/pacificTime";
 
 type EventPayload = {
   id?: string;
   title?: string;
   date?: string | null;
   time?: string | null;
+  displayUntil?: string | null;
   location?: string | null;
   link?: string | null;
   description?: string | null;
@@ -105,6 +107,10 @@ export async function POST(request: Request) {
 
   const date = body.date?.trim() || null;
   const time = body.time?.trim() || null;
+  const { value: displayUntilIso, error: displayUntilError } = pacificDateTimeInputToUtcIso(body.displayUntil);
+  if (displayUntilError) {
+    return NextResponse.json({ error: displayUntilError }, { status: 400 });
+  }
   const location = body.location?.trim() || null;
   const link = body.link?.trim() || null;
   const featured = !!body.featured;
@@ -147,6 +153,7 @@ export async function POST(request: Request) {
     title,
     date,
     time,
+    display_until: displayUntilIso,
     location,
     link,
     description,

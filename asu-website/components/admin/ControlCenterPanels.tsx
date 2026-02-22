@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import ClientToaster from "@/components/admin/ClientToaster";
 import FileDropField from "@/components/admin/FileDropField";
 import TogglePanel from "@/components/admin/TogglePanel";
+import { formatUtcIsoInPacific, utcIsoToPacificDateTimeInput } from "@/lib/pacificTime";
 import { slugifyTitle } from "@/lib/slugify";
 
 type PortableTextChild = { text?: string };
@@ -16,6 +17,7 @@ type EventSummary = {
   title: string;
   date: string | null;
   time: string | null;
+  display_until: string | null;
   location: string | null;
   link: string | null;
   slug: string | null;
@@ -29,6 +31,7 @@ type EventFormState = {
   title: string;
   date: string;
   time: string;
+  displayUntil: string;
   location: string;
   link: string;
   description: string;
@@ -41,6 +44,7 @@ const EMPTY_EVENT_FORM: EventFormState = {
   title: "",
   date: "",
   time: "",
+  displayUntil: "",
   location: "",
   link: "",
   description: "",
@@ -172,6 +176,7 @@ export default function ControlCenterPanels({
           title: events[0].title ?? "",
           date: events[0].date ?? "",
           time: events[0].time ?? "",
+          displayUntil: utcIsoToPacificDateTimeInput(events[0].display_until),
           location: events[0].location ?? "",
           link: events[0].link ?? "",
           description: blocksToPlainText(events[0].description),
@@ -262,6 +267,7 @@ export default function ControlCenterPanels({
         title: selected.title ?? "",
         date: selected.date ?? "",
         time: selected.time ?? "",
+        displayUntil: utcIsoToPacificDateTimeInput(selected.display_until),
         location: selected.location ?? "",
         link: selected.link ?? "",
         description: blocksToPlainText(selected.description),
@@ -395,6 +401,7 @@ export default function ControlCenterPanels({
           title: eventForm.title,
           date: eventForm.date || null,
           time: eventForm.time || null,
+          displayUntil: eventForm.displayUntil || null,
           location: eventForm.location || null,
           link: eventForm.link || null,
           description: eventForm.description || null,
@@ -715,6 +722,11 @@ export default function ControlCenterPanels({
                       {event.date ?? "No date"} {event.time ? `• ${event.time}` : ""}{" "}
                       {event.location ? `• ${event.location}` : ""}
                     </p>
+                    {event.display_until && (
+                      <p className="text-[11px] text-white/60">
+                        Hides from homepage: {formatUtcIsoInPacific(event.display_until)}
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {event.featured && (
@@ -800,6 +812,19 @@ export default function ControlCenterPanels({
                 value={eventForm.time}
                 onChange={(e) => setEventForm((prev) => ({ ...prev, time: e.target.value }))}
               />
+            </label>
+            <label className="flex flex-col gap-2 text-sm text-white/80">
+              Hide from homepage after (California PT)
+              <input
+                type="datetime-local"
+                className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white outline-none focus:border-amber-200/70"
+                name="event_display_until"
+                value={eventForm.displayUntil}
+                onChange={(e) => setEventForm((prev) => ({ ...prev, displayUntil: e.target.value }))}
+              />
+              <span className="text-xs text-white/60">
+                Optional. This always uses America/Los_Angeles time and auto-removes the event from the front page.
+              </span>
             </label>
             <label className="flex flex-col gap-2 text-sm text-white/80">
               Location

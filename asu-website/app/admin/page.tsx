@@ -110,6 +110,7 @@ export default async function AdminPage() {
     title: string;
   date: string | null;
   time: string | null;
+  display_until: string | null;
   location: string | null;
   link: string | null;
   slug: string | null;
@@ -156,7 +157,8 @@ export default async function AdminPage() {
   ] = await Promise.all([
     supabaseAdmin
       .from("events")
-      .select("id,title,date,time,location,link,featured,slug,description,image_url")
+      .select("id,title,date,time,display_until,location,link,featured,slug,description,image_url")
+      .or("display_until.is.null,display_until.gt.now()")
       .order("date", { ascending: true }),
     supabaseAdmin
       .from("officers")
