@@ -43,6 +43,7 @@ type EventRow = {
     title: string;
     date: string | null;
     time: string | null;
+    display_until: string | null;
     location: string | null;
     featured: boolean;
     link: string | null;
@@ -57,6 +58,7 @@ type Event = {
     title: string;
     date?: string;
     time?: string;
+    displayUntil?: string;
     location?: string;
     featured?: boolean;
     link?: string;
@@ -94,6 +96,7 @@ export default async function HomePage() {
             supabase
                 .from("events")
                 .select("*")
+                .or("display_until.is.null,display_until.gt.now()")
                 .order("date", { ascending: true }),
             supabase
                 .from("home_carousel_images")
@@ -115,6 +118,7 @@ export default async function HomePage() {
         title: row.title,
         date: row.date ?? undefined,
         time: row.time ?? undefined,
+        displayUntil: row.display_until ?? undefined,
         location: row.location ?? undefined,
         featured: row.featured,
         link: row.link ?? undefined,
