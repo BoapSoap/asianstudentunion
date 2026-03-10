@@ -1,53 +1,44 @@
 "use client";
 
 import { useState } from "react";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { Accordion, AccordionDetails, AccordionSummary, Typography } from "@mui/material";
 
 export default function TogglePanel({
-    label,
-    children,
+  label,
+  children,
 }: {
-    label: string;
-    children: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
 }) {
-    const [open, setOpen] = useState(false);
-    return (
-        <div
-            style={{
-                border: "1px solid rgba(255,255,255,0.15)",
-                borderRadius: 12,
-                padding: 12,
-                background: "linear-gradient(145deg, rgba(0,0,0,0.25), rgba(255,255,255,0.04))",
-                boxShadow: "0 10px 28px rgba(0,0,0,0.3)",
-            }}
-        >
-            <button
-                type="button"
-                onClick={() => setOpen((o) => !o)}
-                style={{
-                    background: "rgba(255,215,0,0.22)",
-                    color: "var(--accent-color)",
-                    border: "1px solid rgba(255,215,0,0.35)",
-                    borderRadius: 10,
-                    padding: "8px 14px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                }}
-            >
-                {open ? "Close Edit" : label}
-            </button>
-            {open && (
-                <div
-                    style={{
-                        marginTop: 12,
-                        padding: 12,
-                        borderRadius: 12,
-                        background: "rgba(0,0,0,0.35)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                    }}
-                >
-                    {children}
-                </div>
-            )}
-        </div>
-    );
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Accordion
+      expanded={open}
+      onChange={(_, expanded) => setOpen(expanded)}
+      disableGutters
+      sx={{
+        borderRadius: "14px !important",
+        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.18)",
+        background: "rgba(255,255,255,0.06)",
+        boxShadow: "0 16px 28px rgba(0,0,0,0.22)",
+        "&:before": { display: "none" },
+      }}
+    >
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon sx={{ color: "#fde68a" }} />}
+        sx={{
+          px: 2,
+          py: 0.6,
+          backgroundColor: "rgba(245, 158, 11, 0.15)",
+          borderBottom: open ? "1px solid rgba(255,255,255,0.16)" : "none",
+        }}
+      >
+        <Typography sx={{ fontWeight: 700, color: "#fff", letterSpacing: "0.02em" }}>{label}</Typography>
+      </AccordionSummary>
+      <AccordionDetails sx={{ p: 2.2 }}>{children}</AccordionDetails>
+    </Accordion>
+  );
 }

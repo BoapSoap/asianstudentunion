@@ -1,0 +1,77 @@
+.tilted-card-figure {
+  margin: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+.tilted-card-mobile-alert {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 40;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.66);
+  color: #f8de8d;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 5px 10px;
+}
+
+.tilted-card-inner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  transform-style: preserve-3d;
+  will-change: transform;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 215, 0, 0.28);
+  background: rgba(50, 8, 8, 0.4);
+}
+
+.tilted-card-img {
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+  user-select: none;
+  pointer-events: none;
+}
+
+.tilted-card-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 0.7rem 0.9rem;
+  background: linear-gradient(180deg, rgba(25, 5, 5, 0), rgba(25, 5, 5, 0.8));
+  color: #ffe48f;
+  pointer-events: none;
+}
+
+.tilted-card-caption {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 12px));
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(0, 0, 0, 0.74);
+  color: #ffe48f;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 8px 10px;
+}
+
+.tilted-card-demo-text {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}

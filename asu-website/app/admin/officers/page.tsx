@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Box } from "@mui/material";
 import { AdminActionCard, AdminInfoCard, AdminSectionShell } from "@/components/admin/AdminSectionShell";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 
@@ -38,7 +39,7 @@ export default async function AdminOfficersPage() {
 
   return (
     <AdminSectionShell title="Manage Officers" description="Update officer bios, roles, and headshots." role={profile.role}>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" }, gap: 2.5 }}>
         <AdminActionCard
           title="Update officer roster"
           description="Add new officers, update roles, and set term start/end dates."
@@ -59,7 +60,7 @@ export default async function AdminOfficersPage() {
           description="Reset officers for a new term and archive previous rosters."
           badge="Coming soon"
         />
-      </div>
+      </Box>
     </AdminSectionShell>
   );
 }

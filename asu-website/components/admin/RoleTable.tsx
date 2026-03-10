@@ -2,8 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Button,
+  Chip,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
 import type { ProfileRole } from "@/lib/getCurrentProfile";
-import { cn } from "@/lib/utils";
 
 type ProfileRow = {
   id: string;
@@ -31,41 +43,42 @@ function formatDate(value: string) {
 }
 
 function RolePill({ role }: { role: ProfileRole }) {
-  const styles: Record<ProfileRole, string> = {
-    viewer: "bg-white/10 text-white border-white/20",
-    editor: "bg-emerald-500/15 text-emerald-100 border-emerald-400/60",
-    admin: "bg-amber-500/15 text-amber-50 border-amber-400/60",
-    owner: "bg-red-600/15 text-red-50 border-red-500/60",
-  };
-
-  return (
-    <span className={cn("inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide", styles[role])}>
-      {role}
-    </span>
-  );
+  const color = role === "owner" ? "error" : role === "admin" ? "warning" : role === "editor" ? "success" : "default";
+  return <Chip size="small" color={color} label={role} sx={{ textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }} />;
 }
 
 function ActionButton({
   label,
   disabled,
   onClick,
+  tone = "default",
 }: {
   label: string;
   disabled?: boolean;
   onClick: () => void;
+  tone?: "default" | "danger";
 }) {
   return (
-    <button
+    <Button
       type="button"
+      size="small"
+      variant="outlined"
       disabled={disabled}
       onClick={onClick}
-      className={cn(
-        "rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs font-semibold text-white transition hover:border-white/30 hover:bg-white/10",
-        disabled && "cursor-not-allowed opacity-50"
-      )}
+      sx={{
+        borderRadius: 2,
+        textTransform: "none",
+        fontWeight: 700,
+        color: tone === "danger" ? "rgba(254, 202, 202, 1)" : "#fff",
+        borderColor: tone === "danger" ? "rgba(239, 68, 68, 0.55)" : "rgba(255,255,255,0.26)",
+        "&:hover": {
+          borderColor: tone === "danger" ? "rgba(239, 68, 68, 0.78)" : "rgba(255,255,255,0.42)",
+          backgroundColor: tone === "danger" ? "rgba(127, 29, 29, 0.26)" : "rgba(255,255,255,0.08)",
+        },
+      }}
     >
       {label}
-    </button>
+    </Button>
   );
 }
 
@@ -128,8 +141,10 @@ export default function RoleTable({ profiles, viewerRole, currentUserId }: RoleT
   const isAdmin = viewerRole === "admin";
 
   const renderActions = (row: ProfileRow) => {
+    const actionPending = pendingId === row.id || isPending;
+
     if (row.role === "owner") {
-      return <span className="text-xs text-white/60">Owner (locked)</span>;
+      return <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.62)" }}>Owner (locked)</Typography>;
     }
 
     if (isOwner) {
@@ -138,123 +153,136 @@ export default function RoleTable({ profiles, viewerRole, currentUserId }: RoleT
         { label: "Approve as officer (editor)", target: "editor" },
         { label: "Move to pending (viewer)", target: "viewer" },
       ];
+
       return (
-        <div className="flex flex-wrap gap-2">
+        <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end" useFlexGap>
           {options.map((option) => (
             <ActionButton
               key={option.target}
               label={option.label}
-              disabled={option.target === row.role || pendingId === row.id || isPending}
+              disabled={option.target === row.role || actionPending}
               onClick={() => handleUpdate(row.id, option.target)}
             />
           ))}
           <ActionButton
             label="Deny / Remove"
-            disabled={pendingId === row.id || isPending || row.id === currentUserId}
+            tone="danger"
+            disabled={actionPending || row.id === currentUserId}
             onClick={() => handleRemove(row.id)}
           />
-        </div>
+        </Stack>
       );
     }
 
     if (isAdmin) {
       if (row.role === "admin") {
-        return <span className="text-xs text-white/60">Cannot modify admin</span>;
+        return <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.62)" }}>Cannot modify admin</Typography>;
       }
-      if (row.role === "viewer") {
-        return (
-          <ActionButton
-            label="Promote to editor"
-            disabled={pendingId === row.id || isPending}
-            onClick={() => handleUpdate(row.id, "editor")}
-          />
-        );
-      }
+
       if (row.role === "editor") {
         return (
           <ActionButton
             label="Demote to viewer"
-            disabled={pendingId === row.id || isPending}
+            disabled={actionPending}
             onClick={() => handleUpdate(row.id, "viewer")}
           />
         );
       }
+
       if (row.role === "viewer") {
         return (
-          <div className="flex flex-wrap gap-2">
+          <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end" useFlexGap>
             <ActionButton
-              label="Approve as officer (editor)"
-              disabled={pendingId === row.id || isPending}
+              label="Promote to editor"
+              disabled={actionPending}
               onClick={() => handleUpdate(row.id, "editor")}
             />
             <ActionButton
               label="Deny / Remove"
-              disabled={pendingId === row.id || isPending || row.id === currentUserId}
+              tone="danger"
+              disabled={actionPending || row.id === currentUserId}
               onClick={() => handleRemove(row.id)}
             />
-          </div>
+          </Stack>
         );
       }
     }
 
-    return <span className="text-xs text-white/60">No actions</span>;
+    return <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.62)" }}>No actions</Typography>;
   };
 
   const rowTone: Record<ProfileRole, string> = {
-    owner: "bg-red-600/10",
-    admin: "bg-amber-500/10",
-    editor: "bg-emerald-600/10",
-    viewer: "bg-white/5",
+    owner: "rgba(185, 28, 28, 0.18)",
+    admin: "rgba(245, 158, 11, 0.18)",
+    editor: "rgba(16, 185, 129, 0.16)",
+    viewer: "rgba(255,255,255,0.05)",
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-xl backdrop-blur">
-      <table className="min-w-full divide-y divide-white/10">
-        <thead className="bg-white/5">
-          <tr>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white/70">
-              User
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white/70">
-              Role
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white/70">
-              Created
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-white/70">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/10">
+    <TableContainer
+      component={Paper}
+      variant="outlined"
+      sx={{ borderRadius: 3, borderColor: "rgba(255,255,255,0.16)", bgcolor: "rgba(255,255,255,0.07)" }}
+    >
+      <Table size="small">
+        <TableHead>
+          <TableRow sx={{ "& th": { borderColor: "rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.72)", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" } }}>
+            <TableCell>User</TableCell>
+            <TableCell>Role</TableCell>
+            <TableCell>Created</TableCell>
+            <TableCell align="right">Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
           {profiles.map((row) => (
-            <tr key={row.id} className={cn("transition hover:bg-white/10", rowTone[row.role])}>
-              <td className="px-4 py-3 align-top">
-                {row.email && <div className="text-sm font-semibold text-white">{row.email}</div>}
-                <div className="font-mono text-[11px] text-white/70 break-all">{row.id}</div>
-                <div className="text-[11px] text-white/60">Joined {formatDate(row.created_at)}</div>
-                {row.id === currentUserId && (
-                  <div className="mt-1 inline-flex rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-white/80">
-                    You
-                  </div>
+            <TableRow key={row.id} hover sx={{ "& td": { borderColor: "rgba(255,255,255,0.1)" }, backgroundColor: rowTone[row.role] }}>
+              <TableCell sx={{ minWidth: 280, verticalAlign: "top" }}>
+                {row.email && (
+                  <Typography variant="body2" sx={{ color: "#fff", fontWeight: 700 }}>
+                    {row.email}
+                  </Typography>
                 )}
-              </td>
-              <td className="px-4 py-3 align-top">
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", fontFamily: "monospace", wordBreak: "break-all", display: "block" }}>
+                  {row.id}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.62)", display: "block", mt: 0.4 }}>
+                  Joined {formatDate(row.created_at)}
+                </Typography>
+                {row.id === currentUserId && (
+                  <Chip
+                    label="You"
+                    size="small"
+                    sx={{
+                      mt: 1,
+                      bgcolor: "rgba(255,255,255,0.12)",
+                      color: "rgba(255,255,255,0.92)",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  />
+                )}
+              </TableCell>
+              <TableCell sx={{ minWidth: 130, verticalAlign: "top" }}>
                 <RolePill role={row.role} />
-              </td>
-              <td className="px-4 py-3 align-top text-sm text-white/70">{formatDate(row.created_at)}</td>
-              <td className="px-4 py-3 align-top text-right">{renderActions(row)}</td>
-            </tr>
+              </TableCell>
+              <TableCell sx={{ minWidth: 170, color: "rgba(255,255,255,0.74)", verticalAlign: "top" }}>
+                {formatDate(row.created_at)}
+              </TableCell>
+              <TableCell align="right" sx={{ minWidth: 300, verticalAlign: "top" }}>
+                {renderActions(row)}
+              </TableCell>
+            </TableRow>
           ))}
           {profiles.length === 0 && (
-            <tr>
-              <td colSpan={4} className="px-4 py-6 text-center text-sm text-white/70">
+            <TableRow>
+              <TableCell colSpan={4} align="center" sx={{ py: 5, color: "rgba(255,255,255,0.72)" }}>
                 No profiles found.
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           )}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 }

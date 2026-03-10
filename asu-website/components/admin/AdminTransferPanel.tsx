@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button, Paper, Stack, TextField, Typography } from "@mui/material";
 import { toast } from "react-toastify";
 
 export default function AdminTransferPanel() {
@@ -46,30 +47,64 @@ export default function AdminTransferPanel() {
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-white shadow-xl backdrop-blur">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">Admin Control</p>
-        <h3 className="text-lg font-bold text-white">Transfer Admin (Presidency)</h3>
-        <p className="text-sm text-white/70">
-          Enter a user ID or email. Ensures exactly one admin. The current admin is demoted to editor; owner stays owner.
-        </p>
-      </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-        <input
-          className="flex-1 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-amber-200/70"
-          placeholder="User ID or email of the new admin"
-          value={targetValue}
-          onChange={(e) => setTargetValue(e.target.value)}
-        />
-        <button
-          type="button"
-          onClick={handleTransfer}
-          disabled={pending}
-          className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black transition hover:scale-[1.01] hover:bg-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {pending ? "Transferring…" : "Transfer"}
-        </button>
-      </div>
-    </div>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2.25,
+        borderRadius: 3,
+        borderColor: "rgba(245, 158, 11, 0.45)",
+        bgcolor: "rgba(245, 158, 11, 0.12)",
+      }}
+    >
+      <Stack spacing={2}>
+        <Stack spacing={0.5}>
+          <Typography variant="overline" sx={{ letterSpacing: "0.1em", color: "rgba(253, 230, 138, 0.95)", fontWeight: 700 }}>
+            Admin Control
+          </Typography>
+          <Typography variant="h6" sx={{ color: "#fff", fontWeight: 800 }}>
+            Transfer Admin (Presidency)
+          </Typography>
+          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.78)" }}>
+            Enter a user ID or email. Ensures exactly one admin. The current admin is demoted to editor; owner stays owner.
+          </Typography>
+        </Stack>
+
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+          <TextField
+            fullWidth
+            size="small"
+            value={targetValue}
+            onChange={(e) => setTargetValue(e.target.value)}
+            placeholder="User ID or email of the new admin"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                color: "#fff",
+                bgcolor: "rgba(255,255,255,0.05)",
+                "& fieldset": { borderColor: "rgba(255,255,255,0.25)" },
+                "&:hover fieldset": { borderColor: "rgba(255,255,255,0.4)" },
+                "&.Mui-focused fieldset": { borderColor: "rgba(253, 230, 138, 0.9)" },
+              },
+            }}
+          />
+          <Button
+            type="button"
+            onClick={handleTransfer}
+            disabled={pending}
+            variant="contained"
+            sx={{
+              minWidth: 140,
+              borderRadius: 2,
+              textTransform: "none",
+              fontWeight: 700,
+              bgcolor: "#f59e0b",
+              color: "#111827",
+              "&:hover": { bgcolor: "#fbbf24" },
+            }}
+          >
+            {pending ? "Transferring..." : "Transfer"}
+          </Button>
+        </Stack>
+      </Stack>
+    </Paper>
   );
 }

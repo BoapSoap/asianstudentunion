@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { compactChanges, diffFieldChanges, logAdminActivity } from "@/lib/adminActivity";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabaseServer";
 import type { ProfileRole } from "@/lib/getCurrentProfile";
@@ -117,12 +118,25 @@ export async function POST(request: Request) {
   const description = buildDescriptionBlocks(body.description);
   const imageUrl = body.imageUrl?.trim() || null;
 
-  let existing: { id: string; slug: string | null; title: string | null } | null = null;
+  let existing:
+    | {
+        id: string;
+        slug: string | null;
+        title: string | null;
+        date: string | null;
+        time: string | null;
+        display_until: string | null;
+        location: string | null;
+        link: string | null;
+        image_url: string | null;
+        featured: boolean | null;
+      }
+    | null = null;
 
   if (body.id) {
     const { data: eventRow, error: eventError } = await supabaseAdmin
       .from("events")
-      .select("id, slug, title")
+      .select("id,slug,title,date,time,display_until,location,link,image_url,featured")
       .eq("id", body.id)
       .maybeSingle();
 
@@ -207,6 +221,31 @@ export async function POST(request: Request) {
     }
   }
 
+  await logAdminActivity({
+    actorUserId: user.id,
+    actorEmail: user.email ?? null,
+    actorRole: role,
+    action: existing ? "update" : "create",
+    entityType: "event",
+    entityId: savedId,
+    summary: `${existing ? "updated" : "created"} event \"${title}\"`,
+    details: {
+      changes: compactChanges(
+        diffFieldChanges([
+          { label: "Title", before: existing?.title ?? null, after: title },
+          { label: "Date", before: existing?.date ?? null, after: date },
+          { label: "Time", before: existing?.time ?? null, after: time },
+          { label: "Display until", before: existing?.display_until ?? null, after: displayUntilIso },
+          { label: "Location", before: existing?.location ?? null, after: location },
+          { label: "Link", before: existing?.link ?? null, after: link },
+          { label: "Featured", before: existing?.featured ?? null, after: featured },
+          { label: "Image", before: existing?.image_url ?? null, after: imageUrl, format: (value) => (value ? "configured" : "not configured") },
+        ]),
+        `${existing ? "Updated" : "Created"} event`
+      ),
+    },
+  });
+
   return NextResponse.json({ success: true, event: { id: savedId, slug: savedSlug } });
 }
 
@@ -248,11 +287,30 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Event id is required" }, { status: 400 });
   }
 
+  const { data: existing } = await supabaseAdmin
+    .from("events")
+    .select("id,title")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error: deleteError } = await supabaseAdmin.from("events").delete().eq("id", id);
   if (deleteError) {
     console.error("Failed to delete event", deleteError);
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
+
+  await logAdminActivity({
+    actorUserId: user.id,
+    actorEmail: user.email ?? null,
+    actorRole: role,
+    action: "delete",
+    entityType: "event",
+    entityId: id,
+    summary: `deleted event \"${existing?.title ?? id.slice(0, 8)}\"`,
+    details: {
+      changes: compactChanges(existing?.title ? [`Deleted event "${existing.title}"`] : [], "Deleted event"),
+    },
+  });
 
   return NextResponse.json({ success: true });
 }

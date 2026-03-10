@@ -1,8 +1,16 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Box, Button, Chip, Paper, Stack, Typography } from "@mui/material";
 import type { ProfileRole } from "@/lib/getCurrentProfile";
 
 type InfoVariant = "info" | "warning" | "error";
+
+function roleChipColor(role: ProfileRole) {
+  if (role === "owner") return "error";
+  if (role === "admin") return "warning";
+  if (role === "editor") return "success";
+  return "default";
+}
 
 export function AdminSectionShell({
   title,
@@ -22,37 +30,65 @@ export function AdminSectionShell({
   children?: ReactNode;
 }) {
   return (
-    <main
-      className="flex min-h-screen w-full justify-center pb-24 md:pb-32"
-      style={{ paddingTop: "clamp(12rem, 18vh, 20rem)" }}
-    >
-      <div className="w-full max-w-6xl px-4 flex flex-col gap-8">
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-5 shadow-2xl backdrop-blur">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/80">{eyebrow}</p>
-          <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
+    <Box component="main" sx={{ minHeight: "100vh", display: "flex", justifyContent: "center", pb: { xs: 12, md: 16 }, pt: "clamp(12rem, 18vh, 20rem)" }}>
+      <Stack spacing={4} sx={{ width: "100%", maxWidth: 1200, px: 2 }}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 3,
+            borderRadius: 3,
+            borderColor: "rgba(255,255,255,0.16)",
+            bgcolor: "rgba(255,255,255,0.07)",
+            boxShadow: "0 24px 42px rgba(0,0,0,0.26)",
+          }}
+        >
+          <Typography variant="overline" sx={{ color: "rgba(253, 230, 138, 0.86)", fontWeight: 700, letterSpacing: "0.2em" }}>
+            {eyebrow}
+          </Typography>
+          <Stack direction={{ xs: "column", md: "row" }} alignItems={{ xs: "flex-start", md: "center" }} justifyContent="space-between" spacing={2} sx={{ mt: 0.6 }}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2} alignItems={{ xs: "flex-start", sm: "center" }}>
               {backHref && (
-                <Link
-                  href={backHref}
-                  className="inline-flex items-center rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/15"
-                >
-                  ← {backLabel}
+                <Link href={backHref} style={{ textDecoration: "none" }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      color: "#fff",
+                      borderColor: "rgba(255,255,255,0.28)",
+                      borderRadius: 2,
+                      textTransform: "none",
+                      fontWeight: 700,
+                      "&:hover": {
+                        borderColor: "rgba(255,255,255,0.45)",
+                        backgroundColor: "rgba(255,255,255,0.07)",
+                      },
+                    }}
+                  >
+                    {`← ${backLabel}`}
+                  </Button>
                 </Link>
               )}
-              <div>
-                <h1 className="text-3xl font-extrabold text-white">{title}</h1>
-                <p className="text-sm text-white/70">{description}</p>
-              </div>
-            </div>
-            <div className="rounded-full bg-amber-400/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-100">
-              {role}
-            </div>
-          </div>
-        </div>
+              <Box>
+                <Typography variant="h4" sx={{ color: "#fff", fontWeight: 800, lineHeight: 1.15 }}>
+                  {title}
+                </Typography>
+                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.74)", mt: 0.4 }}>
+                  {description}
+                </Typography>
+              </Box>
+            </Stack>
+            <Chip
+              label={role}
+              color={roleChipColor(role)}
+              size="small"
+              sx={{ textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.06em" }}
+            />
+          </Stack>
+        </Paper>
 
         {children}
-      </div>
-    </main>
+      </Stack>
+    </Box>
   );
 }
 
@@ -65,17 +101,22 @@ export function AdminInfoCard({
   body: string;
   variant?: InfoVariant;
 }) {
-  const variants: Record<InfoVariant, string> = {
-    info: "border-white/10 bg-white/5 text-white",
-    warning: "border-amber-400/30 bg-amber-500/10 text-white",
-    error: "border-red-500/40 bg-red-600/15 text-white",
-  };
+  const tone =
+    variant === "warning"
+      ? { borderColor: "rgba(245, 158, 11, 0.35)", bgcolor: "rgba(245, 158, 11, 0.12)" }
+      : variant === "error"
+        ? { borderColor: "rgba(239, 68, 68, 0.42)", bgcolor: "rgba(185, 28, 28, 0.22)" }
+        : { borderColor: "rgba(255,255,255,0.16)", bgcolor: "rgba(255,255,255,0.07)" };
 
   return (
-    <div className={`rounded-2xl border px-6 py-5 shadow-xl backdrop-blur ${variants[variant]}`}>
-      <h2 className="text-xl font-semibold">{title}</h2>
-      <p className="mt-2 text-sm text-white/80">{body}</p>
-    </div>
+    <Paper variant="outlined" sx={{ borderRadius: 3, p: 3, ...tone }}>
+      <Typography variant="h6" sx={{ color: "#fff", fontWeight: 700 }}>
+        {title}
+      </Typography>
+      <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.82)", mt: 1 }}>
+        {body}
+      </Typography>
+    </Paper>
   );
 }
 
@@ -93,33 +134,59 @@ export function AdminActionCard({
   disabled?: boolean;
 }) {
   const content = (
-    <div
-      className={`group relative h-full rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10 ${
-        disabled ? "opacity-70" : ""
-      }`}
+    <Paper
+      variant="outlined"
+      sx={{
+        borderRadius: 2.5,
+        p: 2.25,
+        height: "100%",
+        borderColor: "rgba(255,255,255,0.14)",
+        bgcolor: "rgba(255,255,255,0.06)",
+        transition: "transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease",
+        opacity: disabled ? 0.72 : 1,
+        "&:hover": disabled
+          ? undefined
+          : {
+              transform: "translateY(-2px)",
+              borderColor: "rgba(255,255,255,0.26)",
+              backgroundColor: "rgba(255,255,255,0.08)",
+            },
+      }}
     >
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold text-white">{title}</h3>
-          <p className="mt-2 text-sm text-white/70">{description}</p>
-        </div>
+      <Stack direction="row" justifyContent="space-between" spacing={1.5}>
+        <Box>
+          <Typography variant="h6" sx={{ color: "#fff", fontWeight: 700, fontSize: "1.05rem" }}>
+            {title}
+          </Typography>
+          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.72)", mt: 1 }}>
+            {description}
+          </Typography>
+        </Box>
         {badge && (
-          <span className="rounded-full bg-amber-400/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-100">
-            {badge}
-          </span>
+          <Chip
+            size="small"
+            label={badge}
+            sx={{
+              bgcolor: "rgba(245, 158, 11, 0.2)",
+              color: "rgba(254, 243, 199, 0.95)",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              alignSelf: "flex-start",
+            }}
+          />
         )}
-      </div>
-    </div>
+      </Stack>
+    </Paper>
   );
 
   if (href && !disabled) {
     return (
-      <Link href={href} className="block h-full w-full">
+      <Link href={href} style={{ textDecoration: "none", display: "block", height: "100%" }}>
         {content}
       </Link>
     );
   }
 
-  return <div className="h-full w-full">{content}</div>;
+  return <Box sx={{ height: "100%" }}>{content}</Box>;
 }
