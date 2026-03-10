@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { compactChanges, diffFieldChanges, logAdminActivity } from "@/lib/adminActivity";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabaseServer";
 import type { ProfileRole } from "@/lib/getCurrentProfile";
@@ -65,11 +66,19 @@ export async function POST(request: Request) {
   };
 
   let savedId: string | null = null;
+  let existingSlide:
+    | {
+        id: string;
+        alt: string | null;
+        sort_order: number | null;
+        image_url: string | null;
+      }
+    | null = null;
 
   if (body.id) {
     const { data: existing, error: existingError } = await supabaseAdmin
       .from("home_carousel_images")
-      .select("id")
+      .select("id,alt,sort_order,image_url")
       .eq("id", body.id)
       .maybeSingle();
 
@@ -81,6 +90,8 @@ export async function POST(request: Request) {
     if (!existing) {
       return NextResponse.json({ error: "Slide not found" }, { status: 404 });
     }
+
+    existingSlide = existing;
 
     const { data: updated, error: updateError } = await supabaseAdmin
       .from("home_carousel_images")
@@ -109,6 +120,26 @@ export async function POST(request: Request) {
 
     savedId = inserted.id;
   }
+
+  await logAdminActivity({
+    actorUserId: user.id,
+    actorEmail: user.email ?? null,
+    actorRole: role,
+    action: existingSlide ? "update" : "create",
+    entityType: "carousel_slide",
+    entityId: savedId,
+    summary: `${existingSlide ? "updated" : "created"} home carousel slide ${alt}`,
+    details: {
+      changes: compactChanges(
+        diffFieldChanges([
+          { label: "Alt text", before: existingSlide?.alt ?? null, after: payload.alt },
+          { label: "Sort order", before: existingSlide?.sort_order ?? null, after: payload.sort_order },
+          { label: "Image", before: existingSlide?.image_url ?? null, after: payload.image_url, format: (value) => (value ? "configured" : "not configured") },
+        ]),
+        `${existingSlide ? "Updated" : "Created"} carousel slide`
+      ),
+    },
+  });
 
   return NextResponse.json({ success: true, slide: { id: savedId } });
 }
@@ -151,11 +182,30 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Slide id is required" }, { status: 400 });
   }
 
+  const { data: existing } = await supabaseAdmin
+    .from("home_carousel_images")
+    .select("id,alt")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error: deleteError } = await supabaseAdmin.from("home_carousel_images").delete().eq("id", id);
   if (deleteError) {
     console.error("Failed to delete slide", deleteError);
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
+
+  await logAdminActivity({
+    actorUserId: user.id,
+    actorEmail: user.email ?? null,
+    actorRole: role,
+    action: "delete",
+    entityType: "carousel_slide",
+    entityId: id,
+    summary: `deleted home carousel slide ${existing?.alt ?? id.slice(0, 8)}`,
+    details: {
+      changes: compactChanges(existing?.alt ? [`Deleted slide "${existing.alt}"`] : [], "Deleted carousel slide"),
+    },
+  });
 
   return NextResponse.json({ success: true });
 }

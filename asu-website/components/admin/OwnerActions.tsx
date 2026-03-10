@@ -1,9 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { Button, Paper, Stack, TextField, Typography } from "@mui/material";
 import { toast } from "react-toastify";
 
 type PendingState = "idle" | "resetting" | "transferring";
+
+function surfaceSx(color: "white" | "amber") {
+  if (color === "amber") {
+    return {
+      borderColor: "rgba(245, 158, 11, 0.45)",
+      bgcolor: "rgba(245, 158, 11, 0.12)",
+    };
+  }
+
+  return {
+    borderColor: "rgba(255,255,255,0.24)",
+    bgcolor: "rgba(255,255,255,0.08)",
+  };
+}
 
 export default function OwnerActions() {
   const [pending, setPending] = useState<PendingState>("idle");
@@ -68,52 +83,83 @@ export default function OwnerActions() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2 rounded-lg border border-white/20 bg-white/5 p-4 text-sm text-white/80">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-white">Reset officers for new term</p>
-            <p className="text-xs text-white/60">
+    <Stack spacing={2}>
+      <Paper variant="outlined" sx={{ p: 2.25, borderRadius: 2.5, ...surfaceSx("white") }}>
+        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1.5}>
+          <Stack spacing={0.5}>
+            <Typography variant="subtitle1" sx={{ color: "#fff", fontWeight: 700 }}>
+              Reset officers for new term
+            </Typography>
+            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.68)" }}>
               Deletes all profiles and auth users except owners. Use at the end of the year to start fresh.
-            </p>
-          </div>
-          <button
+            </Typography>
+          </Stack>
+          <Button
             type="button"
             onClick={handleReset}
             disabled={pending !== "idle"}
-            className="rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:border-white/50 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+            variant="outlined"
+            sx={{
+              alignSelf: { xs: "flex-start", md: "center" },
+              borderColor: "rgba(255,255,255,0.35)",
+              color: "#fff",
+              textTransform: "none",
+              fontWeight: 700,
+              borderRadius: 2,
+              "&:hover": { borderColor: "rgba(255,255,255,0.55)", bgcolor: "rgba(255,255,255,0.06)" },
+            }}
           >
-            {pending === "resetting" ? "Resetting…" : "Reset officers"}
-          </button>
-        </div>
-      </div>
+            {pending === "resetting" ? "Resetting..." : "Reset officers"}
+          </Button>
+        </Stack>
+      </Paper>
 
-      <div className="flex flex-col gap-2 rounded-lg border border-white/20 bg-white/5 p-4 text-sm text-white/80">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex-1 min-w-[240px]">
-            <p className="text-sm font-semibold text-white">Transfer admin to new president</p>
-            <p className="text-xs text-white/60">
+      <Paper variant="outlined" sx={{ p: 2.25, borderRadius: 2.5, ...surfaceSx("amber") }}>
+        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1.5}>
+          <Stack spacing={0.5} sx={{ maxWidth: 700 }}>
+            <Typography variant="subtitle1" sx={{ color: "#fff", fontWeight: 700 }}>
+              Transfer admin to new president
+            </Typography>
+            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)" }}>
               Moves the sole admin role to another user ID. The previous admin becomes an editor. Owners stay owners.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2">
-            <input
-              className="w-full min-w-[220px] rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-amber-200/70"
+            </Typography>
+          </Stack>
+
+          <Stack spacing={1.2} sx={{ width: { xs: "100%", md: 320 } }}>
+            <TextField
+              size="small"
               placeholder="Target user ID or email"
               value={targetAdminValue}
               onChange={(e) => setTargetAdminValue(e.target.value)}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  color: "#fff",
+                  bgcolor: "rgba(255,255,255,0.05)",
+                  "& fieldset": { borderColor: "rgba(255,255,255,0.25)" },
+                  "&:hover fieldset": { borderColor: "rgba(255,255,255,0.4)" },
+                  "&.Mui-focused fieldset": { borderColor: "rgba(253, 230, 138, 0.9)" },
+                },
+              }}
             />
-            <button
+            <Button
               type="button"
               onClick={handleTransfer}
               disabled={pending !== "idle"}
-              className="rounded-lg border border-white/30 bg-amber-400 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-black transition hover:scale-[1.01] hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+              variant="contained"
+              sx={{
+                textTransform: "none",
+                fontWeight: 700,
+                borderRadius: 2,
+                bgcolor: "#f59e0b",
+                color: "#111827",
+                "&:hover": { bgcolor: "#fbbf24" },
+              }}
             >
-              {pending === "transferring" ? "Transferring…" : "Transfer admin"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+              {pending === "transferring" ? "Transferring..." : "Transfer admin"}
+            </Button>
+          </Stack>
+        </Stack>
+      </Paper>
+    </Stack>
   );
 }

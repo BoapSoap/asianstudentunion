@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { compactChanges, diffFieldChanges, logAdminActivity } from "@/lib/adminActivity";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabaseServer";
 import type { ProfileRole } from "@/lib/getCurrentProfile";
@@ -81,11 +82,20 @@ export async function POST(request: Request) {
   };
 
   let savedId: string | null = null;
+  let existingOfficer:
+    | {
+        id: string;
+        name: string | null;
+        role: string | null;
+        email: string | null;
+        sort_order: number | null;
+      }
+    | null = null;
 
   if (body.id) {
     const { data: existing, error: existingError } = await supabaseAdmin
       .from("officers")
-      .select("id")
+      .select("id,name,role,email,sort_order")
       .eq("id", body.id)
       .maybeSingle();
 
@@ -97,6 +107,8 @@ export async function POST(request: Request) {
     if (!existing) {
       return NextResponse.json({ error: "Officer not found" }, { status: 404 });
     }
+
+    existingOfficer = existing;
 
     const { data: updated, error: updateError } = await supabaseAdmin
       .from("officers")
@@ -125,6 +137,27 @@ export async function POST(request: Request) {
 
     savedId = inserted.id;
   }
+
+  await logAdminActivity({
+    actorUserId: user.id,
+    actorEmail: user.email ?? null,
+    actorRole: role,
+    action: existingOfficer ? "update" : "create",
+    entityType: "officer",
+    entityId: savedId,
+    summary: `${existingOfficer ? "updated" : "created"} officer card ${name}`,
+    details: {
+      changes: compactChanges(
+        diffFieldChanges([
+          { label: "Name", before: existingOfficer?.name ?? null, after: payload.name },
+          { label: "Role", before: existingOfficer?.role ?? null, after: payload.role },
+          { label: "Email", before: existingOfficer?.email ?? null, after: payload.email },
+          { label: "Sort order", before: existingOfficer?.sort_order ?? null, after: payload.sort_order },
+        ]),
+        `${existingOfficer ? "Updated" : "Created"} officer card`
+      ),
+    },
+  });
 
   return NextResponse.json({ success: true, officer: { id: savedId } });
 }
@@ -167,11 +200,30 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Officer id is required" }, { status: 400 });
   }
 
+  const { data: existing } = await supabaseAdmin
+    .from("officers")
+    .select("id,name")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error: deleteError } = await supabaseAdmin.from("officers").delete().eq("id", id);
   if (deleteError) {
     console.error("Failed to delete officer", deleteError);
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
+
+  await logAdminActivity({
+    actorUserId: user.id,
+    actorEmail: user.email ?? null,
+    actorRole: role,
+    action: "delete",
+    entityType: "officer",
+    entityId: id,
+    summary: `deleted officer card ${existing?.name ?? id.slice(0, 8)}`,
+    details: {
+      changes: compactChanges(existing?.name ? [`Deleted officer "${existing.name}"`] : [], "Deleted officer"),
+    },
+  });
 
   return NextResponse.json({ success: true });
 }
