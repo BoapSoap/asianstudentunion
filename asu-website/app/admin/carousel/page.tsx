@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Box } from "@mui/material";
 import { AdminActionCard, AdminInfoCard, AdminSectionShell } from "@/components/admin/AdminSectionShell";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 
@@ -38,7 +39,7 @@ export default async function AdminCarouselPage() {
 
   return (
     <AdminSectionShell title="Home Carousel" description="Refresh the homepage hero carousel images." role={profile.role}>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" }, gap: 2.5 }}>
         <AdminActionCard
           title="Manage slides"
           description="Add, edit, or reorder hero slides with headline, copy, and link."
@@ -59,7 +60,7 @@ export default async function AdminCarouselPage() {
           description="Preview carousel changes before publishing to the homepage."
           badge="Coming soon"
         />
-      </div>
+      </Box>
     </AdminSectionShell>
   );
 }

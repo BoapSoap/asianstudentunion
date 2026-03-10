@@ -1,5 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Paper, Stack, Typography } from "@mui/material";
+import { AdminInfoCard, AdminSectionShell } from "@/components/admin/AdminSectionShell";
 import RoleTable from "@/components/admin/RoleTable";
 import { getCurrentProfile, type ProfileRole } from "@/lib/getCurrentProfile";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -23,12 +24,17 @@ export default async function RolesPage() {
 
   if (!profile) {
     return (
-      <div className="px-4 py-12">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-red-900/30 px-6 py-5 text-white shadow-lg">
-          <h1 className="text-xl font-bold">Profile not found</h1>
-          <p className="mt-2 text-white/80">Could not load your profile. Please try again later.</p>
-        </div>
-      </div>
+      <AdminSectionShell
+        title="Role Management"
+        description="View officer roles and update permissions."
+        role="viewer"
+      >
+        <AdminInfoCard
+          variant="error"
+          title="Profile not found"
+          body="Could not load your profile. Please try again later."
+        />
+      </AdminSectionShell>
     );
   }
 
@@ -36,13 +42,17 @@ export default async function RolesPage() {
 
   if (!canManageRoles) {
     return (
-      <div className="px-4 py-12">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-white/5 px-6 py-5 text-white shadow-xl backdrop-blur">
-          <h1 className="text-2xl font-bold">Access denied</h1>
-          <p className="mt-2 text-white/70">You do not have permission to manage roles.</p>
-          <p className="mt-1 text-white/60">Please return to the dashboard or contact the site admin.</p>
-        </div>
-      </div>
+      <AdminSectionShell
+        title="Role Management"
+        description="View officer roles and update permissions."
+        role={profile.role}
+      >
+        <AdminInfoCard
+          variant="warning"
+          title="Access denied"
+          body="You do not have permission to manage roles. Please return to the dashboard or contact the site admin."
+        />
+      </AdminSectionShell>
     );
   }
 
@@ -83,40 +93,34 @@ export default async function RolesPage() {
       })) ?? [];
 
   return (
-    <main
-      className="flex min-h-screen w-full justify-center pb-24 md:pb-32"
-      style={{ paddingTop: "clamp(12rem, 18vh, 20rem)" }}
+    <AdminSectionShell
+      title="Role Management"
+      description="View officer roles and update permissions."
+      role={profile.role}
+      backHref="/admin"
+      backLabel="Back to Dashboard"
+      eyebrow="Admin"
     >
-      <div className="w-full max-w-6xl px-4 flex flex-col gap-8">
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-5 shadow-2xl backdrop-blur">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/80">Admin</p>
-          <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <Link
-                href="/admin"
-                className="inline-flex items-center rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/15"
-              >
-                ← Back to Dashboard
-              </Link>
-              <div>
-                <h1 className="text-3xl font-extrabold text-white">Role Management</h1>
-                <p className="text-sm text-white/70">View officer roles and update permissions.</p>
-              </div>
-            </div>
-            <div className="rounded-full bg-amber-400/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-100">
-              {profile.role}
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-white/60">
+      <Paper
+        variant="outlined"
+        sx={{
+          borderRadius: 2.5,
+          p: 2,
+          borderColor: "rgba(255,255,255,0.15)",
+          bgcolor: "rgba(255,255,255,0.06)",
+        }}
+      >
+        <Stack spacing={0.8}>
+          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.66)" }}>
             Owner can assign admins, editors, or viewers. Admin can only promote viewers to editors or demote editors to viewers. Owner and admin rows are protected.
-          </p>
-          <p className="mt-1 text-xs text-white/60">
+          </Typography>
+          <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.66)" }}>
             Role legend: viewer = pending approval, editor = approved officer, admin = president, owner = site maintainer.
-          </p>
-        </div>
+          </Typography>
+        </Stack>
+      </Paper>
 
-        <RoleTable profiles={profiles} viewerRole={profile.role} currentUserId={user.id} />
-      </div>
-    </main>
+      <RoleTable profiles={profiles} viewerRole={profile.role} currentUserId={user.id} />
+    </AdminSectionShell>
   );
 }

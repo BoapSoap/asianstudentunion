@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Box } from "@mui/material";
 import { AdminActionCard, AdminInfoCard, AdminSectionShell } from "@/components/admin/AdminSectionShell";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 
@@ -38,7 +39,7 @@ export default async function AdminEventsPage() {
 
   return (
     <AdminSectionShell title="Manage Events" description="Create, edit, and feature upcoming events." role={profile.role}>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" }, gap: 2.5 }}>
         <AdminActionCard
           title="Create new event"
           description="Add title, date, location, flyer/hero image, and optional RSVP link."
@@ -59,7 +60,7 @@ export default async function AdminEventsPage() {
           description="Upload flyer images, add alt text, and set color-safe button options."
           badge="Coming soon"
         />
-      </div>
+      </Box>
     </AdminSectionShell>
   );
 }

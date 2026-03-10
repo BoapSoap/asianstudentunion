@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Box } from "@mui/material";
 import { AdminActionCard, AdminInfoCard, AdminSectionShell } from "@/components/admin/AdminSectionShell";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 
@@ -38,7 +39,7 @@ export default async function AdminGalleryPage() {
 
   return (
     <AdminSectionShell title="Gallery" description="Add Google Photos links and curate album covers." role={profile.role}>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" }, gap: 2.5 }}>
         <AdminActionCard
           title="Add new album"
           description="Create an album with cover image, title, and Google Photos share link."
@@ -59,7 +60,7 @@ export default async function AdminGalleryPage() {
           description="Verify Google Photos links stay valid and permissions are correct."
           badge="Coming soon"
         />
-      </div>
+      </Box>
     </AdminSectionShell>
   );
 }

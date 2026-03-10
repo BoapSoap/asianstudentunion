@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Box, Button, Chip, Paper, Stack, Typography } from "@mui/material";
 import ControlCenterPanels from "@/components/admin/ControlCenterPanels";
+import AdminLogsPanel from "@/components/admin/AdminLogsPanel";
 import { getCurrentProfile, type ProfileRole } from "@/lib/getCurrentProfile";
 import SignOutButton from "@/components/admin/SignOutButton";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import OwnerActions from "@/components/admin/OwnerActions";
 import AdminTransferPanel from "@/components/admin/AdminTransferPanel";
+import type { AdminActivityLogRecord } from "@/lib/adminActivity";
 
 type PortableTextChild = { text?: string };
 type PortableTextBlock = { _key?: string; children?: PortableTextChild[] };
@@ -14,32 +17,47 @@ export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
 function RoleBadge({ role }: { role: ProfileRole }) {
-  const palette: Record<ProfileRole, string> = {
-    viewer: "bg-white/10 text-white",
-    editor: "bg-emerald-500/20 text-emerald-200 border-emerald-400/60",
-    admin: "bg-amber-500/20 text-amber-100 border-amber-400/70",
-    owner: "bg-red-600/25 text-red-100 border-red-500/70",
-  };
+  const color = role === "owner" ? "error" : role === "admin" ? "warning" : role === "editor" ? "success" : "default";
 
   return (
-    <span
-      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${palette[role]}`}
-    >
-      {role}
-    </span>
+    <Chip
+      color={color}
+      label={role}
+      size="small"
+      sx={{
+        textTransform: "uppercase",
+        fontWeight: 700,
+        letterSpacing: "0.05em",
+      }}
+    />
   );
 }
 
 function PendingApproval() {
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 px-8 py-10 text-white shadow-2xl backdrop-blur">
-      <RoleBadge role="viewer" />
-      <h1 className="text-2xl font-bold">Pending approval</h1>
-      <p className="text-white/70">
-        Your account is logged in but not approved for officer access yet. If you believe this is a mistake, please
-        contact the ASU president or web admin.
-      </p>
-    </div>
+    <Paper
+      variant="outlined"
+      sx={{
+        mx: "auto",
+        maxWidth: 780,
+        p: 4,
+        borderRadius: 3,
+        borderColor: "rgba(255,255,255,0.15)",
+        bgcolor: "rgba(255,255,255,0.06)",
+      }}
+    >
+      <Stack spacing={1.5}>
+        <Box>
+          <RoleBadge role="viewer" />
+        </Box>
+        <Typography variant="h5" sx={{ color: "#fff", fontWeight: 800 }}>
+          Pending approval
+        </Typography>
+        <Typography variant="body1" sx={{ color: "rgba(255,255,255,0.72)" }}>
+          Your account is logged in but not approved for officer access yet. If you believe this is a mistake, please contact the ASU president or web admin.
+        </Typography>
+      </Stack>
+    </Paper>
   );
 }
 
@@ -52,24 +70,53 @@ function DashboardHeader({ role }: { role: ProfileRole }) {
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p className="text-sm uppercase tracking-[0.22em] text-amber-200/80">Admin Dashboard</p>
-        <h1 className="text-3xl font-extrabold text-white">ASU Control Center</h1>
-        <p className="text-sm text-white/70">{subtitle[role]}</p>
-      </div>
-      <div className="flex items-center gap-3">
+    <Stack direction={{ xs: "column", lg: "row" }} justifyContent="space-between" spacing={2.2}>
+      <Box>
+        <Typography variant="overline" sx={{ color: "rgba(253, 230, 138, 0.84)", fontWeight: 700, letterSpacing: "0.22em" }}>
+          Admin Dashboard
+        </Typography>
+        <Typography variant="h4" sx={{ color: "#fff", fontWeight: 900, lineHeight: 1.15 }}>
+          ASU Control Center
+        </Typography>
+        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.74)", mt: 0.6 }}>
+          {subtitle[role]}
+        </Typography>
+      </Box>
+
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2} alignItems={{ xs: "flex-start", sm: "center" }}>
+        <Link href="/admin/store" style={{ textDecoration: "none" }}>
+          <Button
+            size="small"
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              textTransform: "none",
+              fontWeight: 700,
+              color: "#d1fae5",
+              borderColor: "rgba(52, 211, 153, 0.58)",
+              bgcolor: "rgba(16, 185, 129, 0.16)",
+              "&:hover": { bgcolor: "rgba(16, 185, 129, 0.24)", borderColor: "rgba(110, 231, 183, 0.74)" },
+            }}
+          >
+            Store Management
+          </Button>
+        </Link>
+
         <SignOutButton />
-        <div className="flex items-center gap-2">
+
+        <Stack direction="row" spacing={1} alignItems="center">
           <RoleBadge role={role} />
           {role === "owner" && (
-            <span className="rounded-full bg-red-600/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-100">
-              Owner mode
-            </span>
+            <Chip
+              label="Owner mode"
+              size="small"
+              color="error"
+              sx={{ textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em" }}
+            />
           )}
-        </div>
-      </div>
-    </div>
+        </Stack>
+      </Stack>
+    </Stack>
   );
 }
 
@@ -82,22 +129,27 @@ export default async function AdminPage() {
 
   if (!profile) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-12 text-white">
-        <div className="rounded-2xl border border-white/10 bg-red-900/30 px-6 py-5 shadow-lg">
-          <h1 className="text-xl font-bold">Profile not found</h1>
-          <p className="mt-2 text-white/80">
+      <Box sx={{ mx: "auto", maxWidth: 960, px: 2, py: 12 }}>
+        <Paper
+          variant="outlined"
+          sx={{ borderRadius: 3, borderColor: "rgba(255,255,255,0.15)", bgcolor: "rgba(127, 29, 29, 0.35)", p: 3 }}
+        >
+          <Typography variant="h6" sx={{ color: "#fff", fontWeight: 700 }}>
+            Profile not found
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, color: "rgba(255,255,255,0.82)" }}>
             We could not locate your profile record. Please try signing out and back in, or contact the site admin.
-          </p>
-        </div>
-      </div>
+          </Typography>
+        </Paper>
+      </Box>
     );
   }
 
   if (profile.role === "viewer") {
     return (
-      <div className="px-4 py-12">
+      <Box sx={{ px: 2, py: 12 }}>
         <PendingApproval />
-      </div>
+      </Box>
     );
   }
 
@@ -108,16 +160,16 @@ export default async function AdminPage() {
   type AdminEvent = {
     id: string;
     title: string;
-  date: string | null;
-  time: string | null;
-  display_until: string | null;
-  location: string | null;
-  link: string | null;
-  slug: string | null;
-  description: PortableTextBlock[] | null;
-  image_url: string | null;
-  featured: boolean;
-};
+    date: string | null;
+    time: string | null;
+    display_until: string | null;
+    location: string | null;
+    link: string | null;
+    slug: string | null;
+    description: PortableTextBlock[] | null;
+    image_url: string | null;
+    featured: boolean;
+  };
 
   type AdminOfficer = {
     id: string;
@@ -154,6 +206,7 @@ export default async function AdminPage() {
     { data: officersData, error: officersError },
     { data: albumsData, error: albumsError },
     { data: carouselData, error: carouselError },
+    { data: activityLogsData, error: activityLogsError },
   ] = await Promise.all([
     supabaseAdmin
       .from("events")
@@ -176,69 +229,160 @@ export default async function AdminPage() {
       .select("id,alt,sort_order,image_url")
       .order("sort_order", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: true }),
+    isAdmin
+      ? supabaseAdmin
+          .from("admin_activity_logs")
+          .select("id,actor_email,actor_role,action,entity_type,entity_id,summary,details,created_at")
+          .order("created_at", { ascending: false })
+          .limit(25)
+      : Promise.resolve({ data: [] as AdminActivityLogRecord[], error: null }),
   ]);
 
   if (eventsError) console.error("Failed to load events for admin", eventsError);
   if (officersError) console.error("Failed to load officers for admin", officersError);
   if (albumsError) console.error("Failed to load gallery albums for admin", albumsError);
   if (carouselError) console.error("Failed to load carousel images for admin", carouselError);
+  if (activityLogsError) console.error("Failed to load admin activity logs", activityLogsError);
 
   const events: AdminEvent[] = eventsData ?? [];
   const officers: AdminOfficer[] = officersData ?? [];
   const albums: AdminAlbum[] = albumsData ?? [];
   const carousel: AdminCarousel[] = carouselData ?? [];
+  const activityLogs: AdminActivityLogRecord[] = (activityLogsData as AdminActivityLogRecord[] | null) ?? [];
 
   return (
-    <main
-      className="flex min-h-screen w-full justify-center pb-24 md:pb-32"
-      style={{ paddingTop: "clamp(12rem, 18vh, 20rem)" }}
-    >
-      <div className="w-full max-w-6xl px-4 flex flex-col gap-12">
-        <div className="w-full rounded-2xl border border-white/10 bg-white/5 px-6 py-6 shadow-2xl backdrop-blur">
+    <Box component="main" sx={{ minHeight: "100vh", display: "flex", justifyContent: "center", pb: { xs: 12, md: 16 }, pt: "clamp(12rem, 18vh, 20rem)" }}>
+      <Stack spacing={5} sx={{ width: "100%", maxWidth: 1200, px: 2 }}>
+        <Paper
+          variant="outlined"
+          sx={{
+            borderRadius: 3,
+            borderColor: "rgba(255,255,255,0.15)",
+            bgcolor: "rgba(255,255,255,0.06)",
+            p: 3,
+            boxShadow: "0 24px 42px rgba(0,0,0,0.24)",
+          }}
+        >
           <DashboardHeader role={profile.role} />
-        </div>
+        </Paper>
 
         <ControlCenterPanels events={events} officers={officers} albums={albums} carousel={carousel} />
 
-        {isAdmin && (
-          <section className="w-full rounded-2xl border border-amber-400/30 bg-amber-400/10 px-6 py-5 shadow-xl backdrop-blur">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">Permissions</p>
-                <h2 className="text-xl font-bold text-white">Role Management</h2>
-                <p className="text-sm text-white/70">Manage officer access levels and approvals.</p>
-              </div>
-              <Link
-                href="/admin/roles"
-                className="inline-flex items-center rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black transition hover:scale-[1.01] hover:bg-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200"
+        <Paper
+          variant="outlined"
+          sx={{
+            borderRadius: 3,
+            borderColor: "rgba(16, 185, 129, 0.34)",
+            bgcolor: "rgba(16, 185, 129, 0.14)",
+            p: 3,
+          }}
+        >
+          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
+            <Box>
+              <Typography variant="overline" sx={{ color: "rgba(167, 243, 208, 0.95)", fontWeight: 700, letterSpacing: "0.08em" }}>
+                Store
+              </Typography>
+              <Typography variant="h5" sx={{ color: "#fff", fontWeight: 800 }}>
+                ASU Merch Store
+              </Typography>
+              <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.72)", mt: 0.5 }}>
+                Manage store visibility, products, treasurer contact, and preorder fulfillment statuses.
+              </Typography>
+            </Box>
+            <Link href="/admin/store" style={{ textDecoration: "none" }}>
+              <Button
+                variant="contained"
+                sx={{
+                  alignSelf: { xs: "flex-start", md: "center" },
+                  borderRadius: 2,
+                  fontWeight: 700,
+                  textTransform: "none",
+                  bgcolor: "#a7f3d0",
+                  color: "#064e3b",
+                  "&:hover": { bgcolor: "#6ee7b7" },
+                }}
               >
-                Go to Role Management
-              </Link>
-            </div>
-          </section>
+                Open Store Management
+              </Button>
+            </Link>
+          </Stack>
+        </Paper>
+
+        {isAdmin && (
+          <AdminLogsPanel logs={activityLogs} />
         )}
 
-        {isAdminOnly && (
-          <section className="w-full rounded-2xl border border-amber-400/40 bg-amber-400/10 px-6 py-5 shadow-xl backdrop-blur">
-            <AdminTransferPanel />
-          </section>
+        {isAdmin && (
+          <Paper
+            variant="outlined"
+            sx={{
+              borderRadius: 3,
+              borderColor: "rgba(245, 158, 11, 0.4)",
+              bgcolor: "rgba(245, 158, 11, 0.12)",
+              p: 3,
+            }}
+          >
+            <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
+              <Box>
+                <Typography variant="overline" sx={{ color: "rgba(253, 230, 138, 0.94)", fontWeight: 700, letterSpacing: "0.08em" }}>
+                  Permissions
+                </Typography>
+                <Typography variant="h5" sx={{ color: "#fff", fontWeight: 800 }}>
+                  Role Management
+                </Typography>
+                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.72)", mt: 0.5 }}>
+                  Manage officer access levels and approvals.
+                </Typography>
+              </Box>
+              <Link href="/admin/roles" style={{ textDecoration: "none" }}>
+                <Button
+                  variant="contained"
+                  sx={{
+                    alignSelf: { xs: "flex-start", md: "center" },
+                    borderRadius: 2,
+                    textTransform: "none",
+                    fontWeight: 700,
+                    bgcolor: "#f59e0b",
+                    color: "#111827",
+                    "&:hover": { bgcolor: "#fbbf24" },
+                  }}
+                >
+                  Go to Role Management
+                </Button>
+              </Link>
+            </Stack>
+          </Paper>
         )}
+
+        {isAdminOnly && <AdminTransferPanel />}
 
         {isOwner && (
-          <section className="w-full rounded-2xl border border-red-500/30 bg-red-600/10 px-6 py-5 shadow-xl backdrop-blur">
-            <div className="flex flex-col gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-red-200/80">System Controls</p>
-                <h2 className="text-xl font-bold text-white">Owner Actions</h2>
-                <p className="text-sm text-white/70">
+          <Paper
+            variant="outlined"
+            sx={{
+              borderRadius: 3,
+              borderColor: "rgba(239, 68, 68, 0.35)",
+              bgcolor: "rgba(185, 28, 28, 0.2)",
+              p: 3,
+            }}
+          >
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="overline" sx={{ color: "rgba(254, 202, 202, 0.9)", fontWeight: 700, letterSpacing: "0.08em" }}>
+                  System Controls
+                </Typography>
+                <Typography variant="h5" sx={{ color: "#fff", fontWeight: 800 }}>
+                  Owner Actions
+                </Typography>
+                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.72)", mt: 0.5 }}>
                   Reserved for the site maintainer. These actions are immediate and irreversible.
-                </p>
-              </div>
+                </Typography>
+              </Box>
               <OwnerActions />
-            </div>
-          </section>
+            </Stack>
+          </Paper>
         )}
-      </div>
-    </main>
+      </Stack>
+    </Box>
   );
 }

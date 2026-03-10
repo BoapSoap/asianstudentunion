@@ -18,9 +18,20 @@ import {
     Divider,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Roboto_Mono, Mr_Dafoe } from "next/font/google";
+import { FiShoppingCart } from "react-icons/fi";
 import GlassSurface from "./GlassSurface";
+import {
+    emitOpenStoreCart,
+    readStoreCartCount,
+    STORE_CART_OPEN_SESSION_KEY,
+    STORE_CART_STORAGE_KEY,
+    STORE_CART_UPDATED_EVENT,
+} from "@/lib/storeCart";
+
+const DESKTOP_CART_SLOT_WIDTH = 176;
+const STORE_NEW_BADGE_WINDOW_MS = 21 * 24 * 60 * 60 * 1000;
 
 // ------------------------------------------------------
 // FONT CONFIG — change these two blocks to try new fonts
@@ -59,6 +70,10 @@ const TITLE_SEQUENCE = [
 export default function Navbar() {
     const [logoWiggle, setLogoWiggle] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [storeEnabled, setStoreEnabled] = useState(false);
+    const [showStoreNewBadge, setShowStoreNewBadge] = useState(false);
+    const [storeCartCount, setStoreCartCount] = useState(0);
+    const [cartCtaPulse, setCartCtaPulse] = useState(false);
 
     // sequence + typewriter state
     const [sequenceIndex, setSequenceIndex] = useState(0);
@@ -67,15 +82,19 @@ export default function Navbar() {
     );
 
     const pathname = usePathname();
+    const router = useRouter();
 
     const displayedLang = TITLE_SEQUENCE[sequenceIndex].lang;
+    const isLongTitleLanguage = displayedLang === "fil";
 
     const navItems = [
         { label: "Upcoming Events", href: "/#events" },
         { label: "Our History", href: "/about" },
         { label: "Officers", href: "/officers" },
         { label: "Gallery", href: "/gallery" },
+        ...(storeEnabled ? [{ label: "Store", href: "/store", isStore: true }] : []),
     ];
+    const navFrameMaxWidth = storeCartCount > 0 ? 1340 : storeEnabled ? 1260 : 1120;
 
     const enableGlassNav = true; // toggle to false to temporarily disable fluid glass
 
@@ -130,9 +149,122 @@ export default function Navbar() {
         };
     }, [sequenceIndex]);
 
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadStoreVisibility = async () => {
+            try {
+                const response = await fetch("/api/store/settings", {
+                    cache: "no-store",
+                });
+                if (!response.ok) return;
+
+                const payload = (await response.json()) as {
+                    settings?: { is_enabled?: boolean; updated_at?: string | null };
+                };
+
+                if (cancelled) return;
+
+                const isEnabled = payload?.settings?.is_enabled === true;
+                setStoreEnabled(isEnabled);
+
+                if (!isEnabled) {
+                    setShowStoreNewBadge(false);
+                    return;
+                }
+
+                const enabledAtRaw = payload?.settings?.updated_at;
+                const enabledAtMs = enabledAtRaw ? Date.parse(enabledAtRaw) : Number.NaN;
+                if (!Number.isFinite(enabledAtMs)) {
+                    setShowStoreNewBadge(false);
+                    return;
+                }
+
+                const ageMs = Date.now() - enabledAtMs;
+                setShowStoreNewBadge(ageMs >= 0 && ageMs <= STORE_NEW_BADGE_WINDOW_MS);
+            } catch {
+                // ignore navbar store-link failures
+            }
+        };
+
+        void loadStoreVisibility();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        let pulseTimeout: ReturnType<typeof setTimeout> | undefined;
+
+        const updateCount = (nextCount: number) => {
+            setStoreCartCount((previous) => {
+                if (previous === 0 && nextCount > 0) {
+                    setCartCtaPulse(true);
+                    if (pulseTimeout) clearTimeout(pulseTimeout);
+                    pulseTimeout = setTimeout(() => setCartCtaPulse(false), 1100);
+                }
+                return nextCount;
+            });
+        };
+
+        updateCount(readStoreCartCount());
+
+        const handleUpdated = (event: Event) => {
+            const detail = (event as CustomEvent<{ count?: number }>).detail;
+            const next = Number(detail?.count);
+            if (Number.isFinite(next) && next >= 0) {
+                updateCount(next);
+                return;
+            }
+            updateCount(readStoreCartCount());
+        };
+
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key === STORE_CART_STORAGE_KEY) {
+                updateCount(readStoreCartCount());
+            }
+        };
+
+        window.addEventListener(STORE_CART_UPDATED_EVENT, handleUpdated as EventListener);
+        window.addEventListener("storage", handleStorage);
+
+        return () => {
+            if (pulseTimeout) clearTimeout(pulseTimeout);
+            window.removeEventListener(STORE_CART_UPDATED_EVENT, handleUpdated as EventListener);
+            window.removeEventListener("storage", handleStorage);
+        };
+    }, []);
+
+    const handleStoreCartClick = () => {
+        if (pathname === "/store") {
+            emitOpenStoreCart();
+            return;
+        }
+
+        if (typeof window !== "undefined") {
+            window.sessionStorage.setItem(STORE_CART_OPEN_SESSION_KEY, "1");
+        }
+        router.push("/store");
+    };
+
+    const isActiveNavHref = (href: string) => {
+        if (href.startsWith("/#")) return pathname === "/";
+        return pathname === href;
+    };
+
     const navContent = (
         <Box sx={{ px: { xs: 1.4, md: 2.2 }, py: { xs: 0.3, md: 0.5 }, width: "100%" }}>
-            <Toolbar disableGutters sx={{ display: "flex", alignItems: "center", gap: 1.1 }}>
+            <Toolbar
+                disableGutters
+                sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.1,
+                    minHeight: { xs: 56, md: 66 },
+                }}
+            >
                 {/* MOBILE MENU BUTTON */}
                 <IconButton
                     sx={{ display: { xs: "flex", md: "none" }, color: "#FFD700", mr: 1 }}
@@ -175,6 +307,7 @@ export default function Navbar() {
                     variant="h6"
                     sx={{
                         flexGrow: 1,
+                        minWidth: 0,
                         fontWeight: 500,
                         color: "#FFD700",
                         textTransform: "none",
@@ -184,18 +317,17 @@ export default function Navbar() {
                                 displayedLang === "fil"
                                     ? "1.05rem"
                                     : "clamp(1.35rem, 5.5vw, 1.65rem)",
-                            sm: "2.2rem",
+                            sm: isLongTitleLanguage ? "1.5rem" : "1.9rem",
                         },
-                        lineHeight: { xs: 1.15, sm: 1.05 },
+                        lineHeight: { xs: 1.15, sm: 1.18 },
+                        py: { xs: 0, sm: 0.12 },
                         fontFamily: NAV_TITLE_FAMILY,
-                        overflow: { xs: "visible", sm: "visible" },
+                        overflow: { xs: "hidden", md: "clip", lg: "visible" },
+                        textOverflow: { xs: "ellipsis", md: "clip", lg: "clip" },
                         maxWidth: { xs: "calc(100% - 120px)", sm: "100%" },
                         whiteSpace: { xs: "nowrap", sm: "nowrap" },
                         mr: { xs: 1, md: 1.5 },
-                        textShadow: {
-                            xs: "none",
-                            sm: "0 3px 14px rgba(0,0,0,0.45), 0 0 28px rgba(255,215,0,0.45)",
-                        },
+                        textShadow: "0 1px 6px rgba(0,0,0,0.4), 0 0 10px rgba(255,215,0,0.28)",
                     }}
                 >
                     <Link
@@ -210,7 +342,8 @@ export default function Navbar() {
                         <span
                             style={{
                                 display: "inline",
-                                whiteSpace: "normal",
+                                whiteSpace: "nowrap",
+                                paddingRight: "0.2em",
                             }}
                         >
                             {displayedTitle}
@@ -222,19 +355,84 @@ export default function Navbar() {
                 <Box
                     sx={{
                         display: { xs: "none", md: "flex" },
+                        alignItems: "center",
                         gap: 1.4,
                         pr: 0.8,
+                        flexShrink: 0,
                     }}
                 >
                     {navItems.map((item) => (
-                        <AnimatedNavButton
-                            key={item.href}
-                            href={item.href}
-                            active={pathname === item.href}
-                        >
-                            {item.label}
-                        </AnimatedNavButton>
+                        <Box key={item.href} sx={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                            <AnimatedNavButton href={item.href} active={isActiveNavHref(item.href)}>
+                                {item.label}
+                            </AnimatedNavButton>
+                            {item.isStore && showStoreNewBadge && (
+                                <Box
+                                    component="span"
+                                    sx={{
+                                        position: "absolute",
+                                        top: -7,
+                                        right: -8,
+                                        borderRadius: "999px",
+                                        border: "1px solid rgba(255,255,255,0.42)",
+                                        background: "linear-gradient(90deg, #ffd700 0%, #ffea94 100%)",
+                                        color: "#4a0707",
+                                        px: 0.7,
+                                        py: 0.12,
+                                        fontSize: "0.56rem",
+                                        fontWeight: 900,
+                                        lineHeight: 1.2,
+                                        letterSpacing: "0.08em",
+                                        boxShadow: "0 6px 14px rgba(0,0,0,0.28)",
+                                        pointerEvents: "none",
+                                    }}
+                                >
+                                    NEW!
+                                </Box>
+                            )}
+                        </Box>
                     ))}
+
+                    <Box
+                        sx={{
+                            width: storeCartCount > 0 ? DESKTOP_CART_SLOT_WIDTH : 0,
+                            overflow: "hidden",
+                            ml: storeCartCount > 0 ? 0.2 : 0,
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            transition: "width .35s cubic-bezier(.2,.8,.2,1), margin-left .3s ease",
+                        }}
+                    >
+                        <Button
+                            onClick={handleStoreCartClick}
+                            startIcon={<FiShoppingCart size={18} />}
+                            sx={{
+                                minWidth: 168,
+                                whiteSpace: "nowrap",
+                                borderRadius: 999,
+                                px: 1.55,
+                                py: 0.75,
+                                fontWeight: 700,
+                                letterSpacing: "0.07em",
+                                textTransform: "uppercase",
+                                fontFamily: NAV_BODY_FAMILY,
+                                color: "#4a0707",
+                                background: "linear-gradient(90deg, #ffd700 0%, #ffea94 100%)",
+                                boxShadow: "0 0 0 rgba(255,215,0,0)",
+                                animation: cartCtaPulse ? "cartCtaPulse 1s ease" : "none",
+                                transform: storeCartCount > 0 ? "translateX(0) scale(1)" : "translateX(18px) scale(0.92)",
+                                transformOrigin: "right center",
+                                opacity: storeCartCount > 0 ? 1 : 0,
+                                pointerEvents: storeCartCount > 0 ? "auto" : "none",
+                                transition: "transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease",
+                                "&:hover": {
+                                    background: "linear-gradient(90deg, #ffe055 0%, #fff0b0 100%)",
+                                },
+                            }}
+                        >
+                            Cart ({storeCartCount})
+                        </Button>
+                    </Box>
                 </Box>
             </Toolbar>
         </Box>
@@ -256,8 +454,9 @@ export default function Navbar() {
             <Box
                 sx={{
                     width: { xs: "calc(100% - 18px)", sm: "calc(100% - 26px)", md: "100%" },
-                    maxWidth: 1180,
+                    maxWidth: { xs: "calc(100% - 18px)", sm: "calc(100% - 26px)", md: navFrameMaxWidth },
                     mx: "auto",
+                    transition: { md: "max-width .35s cubic-bezier(.2,.8,.2,1)" },
                 }}
             >
                 {enableGlassNav ? (
@@ -366,15 +565,12 @@ export default function Navbar() {
                                     displayedLang === "fil"
                                         ? "1.05rem"
                                         : "clamp(1.35rem, 5.5vw, 1.65rem)",
-                                lineHeight: 1.12,
+                                lineHeight: 1.18,
                                 fontFamily: NAV_TITLE_FAMILY,
                                 overflow: "visible",
                                 maxWidth: "100%",
                                 whiteSpace: "nowrap",
-                                textShadow: {
-                                    xs: "none",
-                                    sm: "0 3px 14px rgba(0,0,0,0.45), 0 0 28px rgba(255,215,0,0.45)",
-                                },
+                                textShadow: "0 1px 6px rgba(0,0,0,0.4), 0 0 10px rgba(255,215,0,0.28)",
                             }}
                         >
                             <span
@@ -395,9 +591,34 @@ export default function Navbar() {
                         }}
                     />
 
+                    {storeCartCount > 0 && (
+                        <Button
+                            onClick={() => {
+                                setMobileOpen(false);
+                                handleStoreCartClick();
+                            }}
+                            startIcon={<FiShoppingCart size={18} />}
+                            sx={{
+                                mb: 1.5,
+                                justifyContent: "flex-start",
+                                borderRadius: 2,
+                                border: "1px solid rgba(255,255,255,0.35)",
+                                background: "rgba(255,215,0,0.18)",
+                                color: "#FFD700",
+                                fontWeight: 700,
+                                letterSpacing: "0.06em",
+                                textTransform: "uppercase",
+                                py: 1,
+                                "&:hover": { background: "rgba(255,215,0,0.24)" },
+                            }}
+                        >
+                            Cart ({storeCartCount})
+                        </Button>
+                    )}
+
                     <List sx={{ flex: 1 }}>
                         {navItems.map((item) => {
-                            const selected = pathname === item.href;
+                            const selected = isActiveNavHref(item.href);
                             return (
                                 <ListItem key={item.href} disablePadding sx={{ mb: 0.5 }}>
                                     <ListItemButton
@@ -424,7 +645,30 @@ export default function Navbar() {
                                         }}
                                     >
                                         <ListItemText
-                                            primary={item.label}
+                                            primary={
+                                                <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.8 }}>
+                                                    <span>{item.label}</span>
+                                                    {item.isStore && showStoreNewBadge && (
+                                                        <Box
+                                                            component="span"
+                                                            sx={{
+                                                                borderRadius: "999px",
+                                                                border: "1px solid rgba(255,255,255,0.35)",
+                                                                background: "rgba(255,215,0,0.22)",
+                                                                color: "#FFD700",
+                                                                px: 0.6,
+                                                                py: 0.1,
+                                                                fontSize: "0.58rem",
+                                                                fontWeight: 800,
+                                                                lineHeight: 1.1,
+                                                                letterSpacing: "0.08em",
+                                                            }}
+                                                        >
+                                                            NEW!
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            }
                                             primaryTypographyProps={{
                                                 sx: {
                                                     color: selected
@@ -461,6 +705,20 @@ export default function Navbar() {
                     }
                     100% {
                         transform: rotate(0deg);
+                    }
+                }
+                @keyframes cartCtaPulse {
+                    0% {
+                        transform: scale(1);
+                        box-shadow: 0 0 0 rgba(255, 215, 0, 0);
+                    }
+                    35% {
+                        transform: scale(1.08);
+                        box-shadow: 0 0 0 10px rgba(255, 215, 0, 0.14);
+                    }
+                    100% {
+                        transform: scale(1);
+                        box-shadow: 0 0 0 rgba(255, 215, 0, 0);
                     }
                 }
             `}</style>

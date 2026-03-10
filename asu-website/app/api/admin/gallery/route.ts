@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { compactChanges, diffFieldChanges, logAdminActivity } from "@/lib/adminActivity";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabaseServer";
 import type { ProfileRole } from "@/lib/getCurrentProfile";
@@ -67,11 +68,20 @@ export async function POST(request: Request) {
   };
 
   let savedId: string | null = null;
+  let existingAlbum:
+    | {
+        id: string;
+        title: string | null;
+        date: string | null;
+        google_photos_url: string | null;
+        cover_image_url: string | null;
+      }
+    | null = null;
 
   if (body.id) {
     const { data: existing, error: existingError } = await supabaseAdmin
       .from("gallery_albums")
-      .select("id")
+      .select("id,title,date,google_photos_url,cover_image_url")
       .eq("id", body.id)
       .maybeSingle();
 
@@ -83,6 +93,8 @@ export async function POST(request: Request) {
     if (!existing) {
       return NextResponse.json({ error: "Album not found" }, { status: 404 });
     }
+
+    existingAlbum = existing;
 
     const { data: updated, error: updateError } = await supabaseAdmin
       .from("gallery_albums")
@@ -111,6 +123,27 @@ export async function POST(request: Request) {
 
     savedId = inserted.id;
   }
+
+  await logAdminActivity({
+    actorUserId: user.id,
+    actorEmail: user.email ?? null,
+    actorRole: role,
+    action: existingAlbum ? "update" : "create",
+    entityType: "gallery_album",
+    entityId: savedId,
+    summary: `${existingAlbum ? "updated" : "created"} gallery album ${title}`,
+    details: {
+      changes: compactChanges(
+        diffFieldChanges([
+          { label: "Title", before: existingAlbum?.title ?? null, after: payload.title },
+          { label: "Date", before: existingAlbum?.date ?? null, after: payload.date },
+          { label: "Google Photos link", before: existingAlbum?.google_photos_url ?? null, after: payload.google_photos_url, format: (value) => (value ? "configured" : "not configured") },
+          { label: "Cover image", before: existingAlbum?.cover_image_url ?? null, after: payload.cover_image_url, format: (value) => (value ? "configured" : "not configured") },
+        ]),
+        `${existingAlbum ? "Updated" : "Created"} gallery album`
+      ),
+    },
+  });
 
   return NextResponse.json({ success: true, album: { id: savedId } });
 }
@@ -153,11 +186,30 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Album id is required" }, { status: 400 });
   }
 
+  const { data: existing } = await supabaseAdmin
+    .from("gallery_albums")
+    .select("id,title")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error: deleteError } = await supabaseAdmin.from("gallery_albums").delete().eq("id", id);
   if (deleteError) {
     console.error("Failed to delete album", deleteError);
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
+
+  await logAdminActivity({
+    actorUserId: user.id,
+    actorEmail: user.email ?? null,
+    actorRole: role,
+    action: "delete",
+    entityType: "gallery_album",
+    entityId: id,
+    summary: `deleted gallery album ${existing?.title ?? id.slice(0, 8)}`,
+    details: {
+      changes: compactChanges(existing?.title ? [`Deleted album "${existing.title}"`] : [], "Deleted gallery album"),
+    },
+  });
 
   return NextResponse.json({ success: true });
 }

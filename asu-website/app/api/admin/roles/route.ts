@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { compactChanges, logAdminActivity } from "@/lib/adminActivity";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabaseServer";
 import type { ProfileRole } from "@/lib/getCurrentProfile";
@@ -108,6 +109,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 
+  await logAdminActivity({
+    actorUserId: user.id,
+    actorEmail: user.email ?? null,
+    actorRole,
+    action: "update_role",
+    entityType: "profile_role",
+    entityId: targetUserId,
+    summary: `changed access for user ${targetUserId.slice(0, 8)} from ${targetCurrentRole} to ${targetRole}`,
+    details: {
+      changes: compactChanges([`Role: ${targetCurrentRole} -> ${targetRole}`], "Updated user role"),
+      target_user_id: targetUserId,
+    },
+  });
+
   return NextResponse.json({ success: true });
 }
 
@@ -190,6 +205,20 @@ export async function DELETE(request: Request) {
     console.error("Failed to delete auth user", deleteUserError);
     // Not fatal for profile removal; still return success
   }
+
+  await logAdminActivity({
+    actorUserId: user.id,
+    actorEmail: user.email ?? null,
+    actorRole,
+    action: "remove_user",
+    entityType: "profile_role",
+    entityId: targetUserId,
+    summary: `removed user ${targetUserId.slice(0, 8)} with ${targetRole} access`,
+    details: {
+      changes: compactChanges([`Removed user with role ${targetRole}`], "Removed user access"),
+      target_user_id: targetUserId,
+    },
+  });
 
   return NextResponse.json({ success: true });
 }

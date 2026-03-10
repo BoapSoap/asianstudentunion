@@ -17,6 +17,9 @@ function canUseWebGL() {
 }
 
 export default function BackgroundLiquid() {
+    const backgroundMode = (process.env.NEXT_PUBLIC_BACKGROUND_MODE || "solid").toLowerCase();
+    const useSolidBackground = backgroundMode !== "liquid";
+
     const envAllows =
         typeof process === "undefined" ||
         process.env.NEXT_PUBLIC_ENABLE_LIQUID !== "false";
@@ -30,12 +33,14 @@ export default function BackgroundLiquid() {
     const isHeavyRoute = useMemo(() => false, [pathname]);
 
     useEffect(() => {
+        if (useSolidBackground) return;
         // defer mount so main content can settle first
         const timeout = setTimeout(() => setReady(true), 800);
         return () => clearTimeout(timeout);
-    }, []);
+    }, [useSolidBackground]);
 
     useEffect(() => {
+        if (useSolidBackground) return;
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
         const smallScreen = window.matchMedia("(max-width: 768px)");
         const lowPower = window.matchMedia("(prefers-reduced-data: reduce)");
@@ -58,14 +63,29 @@ export default function BackgroundLiquid() {
             smallScreen.removeEventListener("change", update);
             lowPower.removeEventListener("change", update);
         };
-    }, [resolution]);
+    }, [resolution, useSolidBackground]);
 
     useEffect(() => {
+        if (useSolidBackground) return;
         const handleVisibility = () => setVisible(!document.hidden);
         handleVisibility();
         document.addEventListener("visibilitychange", handleVisibility);
         return () => document.removeEventListener("visibilitychange", handleVisibility);
-    }, []);
+    }, [useSolidBackground]);
+
+    if (useSolidBackground) {
+        return (
+            <div
+                style={{
+                    position: "fixed",
+                    inset: 0,
+                    zIndex: -1,
+                    pointerEvents: "none",
+                    backgroundColor: "#1e0204",
+                }}
+            />
+        );
+    }
 
     if (!envAllows || !enabled || !visible || isHeavyRoute || !ready || !webglSupported) return null;
 
@@ -77,14 +97,14 @@ export default function BackgroundLiquid() {
                 zIndex: -1,
                 overflow: "hidden",
                 pointerEvents: "none",
-                backgroundColor: "#1a0404",
+                backgroundColor: "#130102",
                 background:
-                    "radial-gradient(circle at 18% 18%, rgba(214, 47, 47, 0.35), transparent 46%), radial-gradient(circle at 78% 72%, rgba(255, 134, 134, 0.3), transparent 45%), linear-gradient(145deg, #1a0404 0%, #240303 45%, #2d0202 100%), #240303",
+                    "radial-gradient(circle at 18% 18%, rgba(139, 10, 20, 0.36), transparent 46%), radial-gradient(circle at 78% 72%, rgba(84, 6, 14, 0.34), transparent 45%), linear-gradient(145deg, #130102 0%, #1e0204 45%, #2a0306 100%), #1e0204",
             }}
         >
             {webglSupported ? (
                 <LiquidEther
-                    colors={["#340404", "#7a0c0c", "#c01717", "#ffb300", "#ffd75e"]}
+                    colors={["#1a0203", "#340406", "#5a0a10", "#7f0f18", "#a81622"]}
                     mouseForce={7}
                     cursorSize={48}
                     resolution={resolution}
