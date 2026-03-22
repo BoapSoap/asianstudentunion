@@ -324,7 +324,8 @@ export default function StoreAdminPanel({
   orders: StoreOrder[];
   viewerRole: ProfileRole;
 }) {
-  const canManageOrders = viewerRole === "admin" || viewerRole === "owner";
+  const canManageOrders =
+    viewerRole === "editor" || viewerRole === "admin" || viewerRole === "owner";
   const [settingsState, setSettingsState] = useState<StoreSettings>({
     id: settings?.id ?? null,
     is_enabled: settings?.is_enabled ?? false,
@@ -1314,7 +1315,7 @@ export default function StoreAdminPanel({
         "& .MuiAlert-icon": { color: "#fde68a" },
       }}
     >
-      Fulfillment queue search, CSV export, audit-linked status updates, and reminder controls are limited to admin and owner accounts.
+      Fulfillment queue search, CSV export, audit-linked status updates, and reminder controls are limited to editor, admin, and owner accounts.
     </Alert>
   );
 

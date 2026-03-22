@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { compactChanges, logAdminActivity } from "@/lib/adminActivity";
-import { requireAdminAccess } from "@/lib/adminAccess";
+import { requireEditorAccess } from "@/lib/adminAccess";
 import { getPaidReminderHours, isReminderDue } from "@/lib/storeReminders";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendTreasurerPaidReminderEmail } from "@/lib/storeEmail";
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST() {
-  const access = await requireAdminAccess();
+  const access = await requireEditorAccess();
   if ("error" in access) {
     return access.error;
   }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { compactChanges, logAdminActivity } from "@/lib/adminActivity";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminAccess } from "@/lib/adminAccess";
+import { requireEditorAccess } from "@/lib/adminAccess";
 import type { OrderStatus } from "@/lib/store";
 import {
   sendCustomerOrderInProgressEmail,
@@ -21,7 +21,7 @@ const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const access = await requireAdminAccess();
+  const access = await requireEditorAccess();
   if ("error" in access) {
     return access.error;
   }
@@ -42,7 +42,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const access = await requireAdminAccess();
+  const access = await requireEditorAccess();
   if ("error" in access) {
     return access.error;
   }
@@ -187,7 +187,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const access = await requireAdminAccess();
+  const access = await requireEditorAccess();
   if ("error" in access) {
     return access.error;
   }

@@ -116,7 +116,8 @@ export default async function AdminStorePage() {
     );
   }
 
-  const canManageOrders = profile.role === "admin" || profile.role === "owner";
+  const canManageOrders =
+    profile.role === "editor" || profile.role === "admin" || profile.role === "owner";
 
   const [settingsResult, contactsResult, productsResult, ordersResult] = await Promise.all([
     supabaseAdmin
