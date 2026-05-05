@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AdminInfoCard, AdminSectionShell } from "@/components/admin/AdminSectionShell";
 import StoreAdminPanel from "@/components/admin/StoreAdminPanel";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { isMissingProductCatalogColumnsError, normalizeProductType, normalizeSizeOptions, type StoreProductType } from "@/lib/store";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const revalidate = 0;
@@ -35,6 +36,8 @@ type StoreProduct = {
   price_cents: number;
   stripe_price_id: string;
   image_url: string | null;
+  product_type: StoreProductType | string | null;
+  size_options: string[] | null;
   images: StoreProductImage[];
   colors: StoreProductColor[];
   is_active: boolean;
@@ -119,7 +122,7 @@ export default async function AdminStorePage() {
   const canManageOrders =
     profile.role === "editor" || profile.role === "admin" || profile.role === "owner";
 
-  const [settingsResult, contactsResult, productsResult, ordersResult] = await Promise.all([
+  const [settingsResult, contactsResult, initialProductsResult, ordersResult] = await Promise.all([
     supabaseAdmin
       .from("store_settings")
       .select(
@@ -136,7 +139,7 @@ export default async function AdminStorePage() {
       .order("updated_at", { ascending: false }),
     supabaseAdmin
       .from("products")
-      .select("id,name,description,price_cents,stripe_price_id,image_url,is_active,created_at")
+      .select("id,name,description,price_cents,stripe_price_id,image_url,product_type,size_options,is_active,created_at")
       .order("created_at", { ascending: false }),
     canManageOrders
       ? supabaseAdmin
@@ -147,6 +150,14 @@ export default async function AdminStorePage() {
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] as OrderWithProduct[], error: null }),
   ]);
+
+  const productsResult =
+    initialProductsResult.error && isMissingProductCatalogColumnsError(initialProductsResult.error)
+      ? await supabaseAdmin
+          .from("products")
+          .select("id,name,description,price_cents,stripe_price_id,image_url,is_active,created_at")
+          .order("created_at", { ascending: false })
+      : initialProductsResult;
 
   if (settingsResult.error) console.error("Failed to load store settings", settingsResult.error);
   if (contactsResult.error) console.error("Failed to load store contacts", contactsResult.error);
@@ -209,18 +220,22 @@ export default async function AdminStorePage() {
   }
 
   const products: StoreProduct[] = baseProducts.map((product) => {
+    const productType = normalizeProductType(product.product_type);
+    const sizeOptions = normalizeSizeOptions(product.size_options, productType);
     const images = imagesByProduct.get(product.id) ?? [];
     const colors = colorsByProduct.get(product.id) ?? [];
     if (images.length > 0) {
-      return { ...product, images, colors };
+      return { ...product, product_type: productType, size_options: sizeOptions, images, colors };
     }
 
     if (!product.image_url) {
-      return { ...product, images: [], colors };
+      return { ...product, product_type: productType, size_options: sizeOptions, images: [], colors };
     }
 
     return {
       ...product,
+      product_type: productType,
+      size_options: sizeOptions,
       colors,
       images: [
         {

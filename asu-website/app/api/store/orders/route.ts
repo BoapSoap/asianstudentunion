@@ -1,7 +1,13 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { sanitizeQuantity, type StorePaymentMethod } from "@/lib/store";
+import {
+  isMissingProductCatalogColumnsError,
+  normalizeProductType,
+  normalizeSizeOptions,
+  sanitizeQuantity,
+  type StorePaymentMethod,
+} from "@/lib/store";
 import { sendCustomerOrderPaidEmail, sendTreasurerOrderEmail } from "@/lib/storeEmail";
 const DEFAULT_PICKUP_INSTRUCTIONS = "Pickup in ASU room.";
 
@@ -18,6 +24,15 @@ type CreateOrderPayload = {
   payment_method?: StorePaymentMethod;
   payment_reference?: string | null;
   items?: CheckoutItemPayload[];
+};
+
+type CheckoutProduct = {
+  id: string;
+  name: string;
+  price_cents: number;
+  is_active: boolean;
+  product_type?: string | null;
+  size_options?: string[] | null;
 };
 
 export const runtime = "nodejs";
@@ -94,23 +109,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Cart items are invalid" }, { status: 400 });
   }
 
-  const mergedByKey = new Map<
-    string,
-    { productId: string; quantity: number; size: string | null; colorId: string | null }
-  >();
   for (const item of parsedItems) {
-    const key = `${item.productId}::${item.size || ""}::${item.colorId || ""}`;
-    const existing = mergedByKey.get(key);
-    if (existing) {
-      existing.quantity = Math.min(99, existing.quantity + item.quantity);
-      continue;
-    }
-    mergedByKey.set(key, { ...item });
-  }
-
-  const items = Array.from(mergedByKey.values());
-
-  for (const item of items) {
     if (item.colorId && !isUuid(item.colorId)) {
       return NextResponse.json({ error: "Invalid color selection" }, { status: 400 });
     }
@@ -140,15 +139,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Zelle is currently unavailable" }, { status: 400 });
   }
 
-  const productIds = Array.from(new Set(items.map((item) => item.productId)));
-  const colorIds = Array.from(
-    new Set(items.map((item) => item.colorId).filter((value): value is string => Boolean(value)))
-  );
+  const productIds = Array.from(new Set(parsedItems.map((item) => item.productId)));
 
-  const { data: products, error: productsError } = await supabaseAdmin
+  const initialProductsResult = await supabaseAdmin
     .from("products")
-    .select("id,name,price_cents,is_active")
+    .select("id,name,price_cents,is_active,product_type,size_options")
     .in("id", productIds);
+
+  const productsResult =
+    initialProductsResult.error && isMissingProductCatalogColumnsError(initialProductsResult.error)
+      ? await supabaseAdmin
+          .from("products")
+          .select("id,name,price_cents,is_active")
+          .in("id", productIds)
+      : initialProductsResult;
+
+  const { data: products, error: productsError } = productsResult as {
+    data: CheckoutProduct[] | null;
+    error: typeof productsResult.error;
+  };
 
   if (productsError) {
     console.error("Failed to load products for manual checkout", productsError);
@@ -157,12 +166,61 @@ export async function POST(request: Request) {
 
   const productById = new Map((products ?? []).map((product) => [product.id, product]));
 
-  for (const item of items) {
+  for (const item of parsedItems) {
     const product = productById.get(item.productId);
     if (!product || !product.is_active) {
       return NextResponse.json({ error: "One or more products are unavailable" }, { status: 400 });
     }
   }
+
+  const normalizedItems:
+    | Array<{ productId: string; quantity: number; size: string | null; colorId: string | null }>
+    | NextResponse = (() => {
+      const next: Array<{ productId: string; quantity: number; size: string | null; colorId: string | null }> = [];
+
+      for (const item of parsedItems) {
+        const product = productById.get(item.productId)!;
+        const productType = normalizeProductType(product.product_type);
+        const sizeOptions = normalizeSizeOptions(product.size_options, productType);
+        let size = item.size;
+
+        if (sizeOptions.length === 0) {
+          size = null;
+        } else if (!size || !sizeOptions.includes(size)) {
+          return NextResponse.json(
+            { error: `Please select a valid size for ${product.name}.` },
+            { status: 400 }
+          );
+        }
+
+        next.push({ ...item, size });
+      }
+
+      return next;
+    })();
+
+  if (normalizedItems instanceof NextResponse) {
+    return normalizedItems;
+  }
+
+  const mergedByKey = new Map<
+    string,
+    { productId: string; quantity: number; size: string | null; colorId: string | null }
+  >();
+  for (const item of normalizedItems) {
+    const key = `${item.productId}::${item.size || ""}::${item.colorId || ""}`;
+    const existing = mergedByKey.get(key);
+    if (existing) {
+      existing.quantity = Math.min(99, existing.quantity + item.quantity);
+      continue;
+    }
+    mergedByKey.set(key, { ...item });
+  }
+
+  const items = Array.from(mergedByKey.values());
+  const colorIds = Array.from(
+    new Set(items.map((item) => item.colorId).filter((value): value is string => Boolean(value)))
+  );
 
   const { data: colorRows, error: colorsError } =
     colorIds.length === 0

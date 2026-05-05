@@ -9,6 +9,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import OwnerActions from "@/components/admin/OwnerActions";
 import AdminTransferPanel from "@/components/admin/AdminTransferPanel";
 import type { AdminActivityLogRecord } from "@/lib/adminActivity";
+import type { SocialLink } from "@/lib/socialLinks";
 
 type PortableTextChild = { text?: string };
 type PortableTextBlock = { _key?: string; children?: PortableTextChild[] };
@@ -206,6 +207,7 @@ export default async function AdminPage() {
     { data: officersData, error: officersError },
     { data: albumsData, error: albumsError },
     { data: carouselData, error: carouselError },
+    { data: socialLinksData, error: socialLinksError },
     { data: activityLogsData, error: activityLogsError },
   ] = await Promise.all([
     supabaseAdmin
@@ -229,6 +231,11 @@ export default async function AdminPage() {
       .select("id,alt,sort_order,image_url")
       .order("sort_order", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: true }),
+    supabaseAdmin
+      .from("social_links")
+      .select("id,label,url,icon_url,sort_order,is_active")
+      .order("sort_order", { ascending: true, nullsFirst: true })
+      .order("created_at", { ascending: true }),
     isAdmin
       ? supabaseAdmin
           .from("admin_activity_logs")
@@ -242,12 +249,14 @@ export default async function AdminPage() {
   if (officersError) console.error("Failed to load officers for admin", officersError);
   if (albumsError) console.error("Failed to load gallery albums for admin", albumsError);
   if (carouselError) console.error("Failed to load carousel images for admin", carouselError);
+  if (socialLinksError) console.error("Failed to load social links for admin", socialLinksError);
   if (activityLogsError) console.error("Failed to load admin activity logs", activityLogsError);
 
   const events: AdminEvent[] = eventsData ?? [];
   const officers: AdminOfficer[] = officersData ?? [];
   const albums: AdminAlbum[] = albumsData ?? [];
   const carousel: AdminCarousel[] = carouselData ?? [];
+  const socialLinks: SocialLink[] = (socialLinksData as SocialLink[] | null) ?? [];
   const activityLogs: AdminActivityLogRecord[] = (activityLogsData as AdminActivityLogRecord[] | null) ?? [];
 
   return (
@@ -266,7 +275,7 @@ export default async function AdminPage() {
           <DashboardHeader role={profile.role} />
         </Paper>
 
-        <ControlCenterPanels events={events} officers={officers} albums={albums} carousel={carousel} />
+        <ControlCenterPanels events={events} officers={officers} albums={albums} carousel={carousel} socialLinks={socialLinks} />
 
         <Paper
           variant="outlined"

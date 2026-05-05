@@ -1,7 +1,12 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { compactChanges, diffFieldChanges, logAdminActivity } from "@/lib/adminActivity";
-import { formatUsdFromCents } from "@/lib/store";
+import {
+  formatUsdFromCents,
+  normalizeProductType,
+  normalizeSizeOptions,
+  type StoreProductType,
+} from "@/lib/store";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireEditorAccess } from "@/lib/adminAccess";
 
@@ -17,6 +22,8 @@ type ProductPayload = {
   name?: string;
   description?: string | null;
   price_cents?: number;
+  product_type?: StoreProductType | string | null;
+  size_options?: string[] | null;
   image_url?: string | null;
   image_urls?: string[];
   thumbnail_index?: number;
@@ -31,6 +38,8 @@ type ProductRecord = {
   price_cents: number;
   stripe_price_id: string;
   image_url: string | null;
+  product_type: StoreProductType;
+  size_options: string[];
   is_active: boolean;
   created_at: string;
 };
@@ -78,7 +87,7 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from("products")
-    .select("id,name,description,price_cents,stripe_price_id,image_url,is_active,created_at")
+    .select("id,name,description,price_cents,stripe_price_id,image_url,product_type,size_options,is_active,created_at")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -107,6 +116,8 @@ export async function POST(request: Request) {
   const name = body.name?.trim();
   const description = normalizeOptionalText(body.description);
   const priceCents = Number(body.price_cents);
+  const productType = normalizeProductType(body.product_type);
+  const sizeOptions = normalizeSizeOptions(body.size_options, productType);
   const isActive = typeof body.is_active === "boolean" ? body.is_active : true;
 
   if (!name) {
@@ -114,6 +125,9 @@ export async function POST(request: Request) {
   }
   if (!Number.isInteger(priceCents) || priceCents < 1) {
     return NextResponse.json({ error: "price_cents must be a positive integer" }, { status: 400 });
+  }
+  if (productType === "clothing" && sizeOptions.length === 0) {
+    return NextResponse.json({ error: "Clothing products need at least one size option" }, { status: 400 });
   }
 
   const { imageUrls, thumbnailIndex } = normalizeIncomingImages(body);
@@ -126,7 +140,7 @@ export async function POST(request: Request) {
   if (body.id) {
     const { data: existing, error: existingError } = await supabaseAdmin
       .from("products")
-      .select("id,name,description,price_cents,stripe_price_id,image_url,is_active,created_at")
+      .select("id,name,description,price_cents,stripe_price_id,image_url,product_type,size_options,is_active,created_at")
       .eq("id", body.id)
       .maybeSingle();
 
@@ -147,12 +161,14 @@ export async function POST(request: Request) {
         name,
         description,
         price_cents: priceCents,
+        product_type: productType,
+        size_options: sizeOptions,
         stripe_price_id: existing.stripe_price_id || `manual_price_${randomUUID()}`,
         image_url: thumbnailUrl,
         is_active: isActive,
       })
       .eq("id", body.id)
-      .select("id,name,description,price_cents,stripe_price_id,image_url,is_active,created_at")
+      .select("id,name,description,price_cents,stripe_price_id,image_url,product_type,size_options,is_active,created_at")
       .maybeSingle();
 
     if (updateError || !updated) {
@@ -168,11 +184,13 @@ export async function POST(request: Request) {
         name,
         description,
         price_cents: priceCents,
+        product_type: productType,
+        size_options: sizeOptions,
         stripe_price_id: `manual_price_${randomUUID()}`,
         image_url: thumbnailUrl,
         is_active: isActive,
       })
-      .select("id,name,description,price_cents,stripe_price_id,image_url,is_active,created_at")
+      .select("id,name,description,price_cents,stripe_price_id,image_url,product_type,size_options,is_active,created_at")
       .single();
 
     if (insertError || !inserted) {
@@ -214,6 +232,12 @@ export async function POST(request: Request) {
             before: existingProductForLog?.price_cents ?? null,
             after: responseProduct.price_cents,
             format: (value) => (typeof value === "number" ? formatUsdFromCents(value) : "none"),
+          },
+          { label: "Item type", before: existingProductForLog?.product_type ?? null, after: responseProduct.product_type },
+          {
+            label: "Sizes",
+            before: existingProductForLog?.size_options ?? null,
+            after: responseProduct.size_options,
           },
           { label: "Active", before: existingProductForLog?.is_active ?? null, after: responseProduct.is_active },
           {
@@ -310,7 +334,7 @@ export async function PATCH(request: Request) {
     .from("products")
     .update({ is_active: body.is_active })
     .eq("id", id)
-    .select("id,name,description,price_cents,stripe_price_id,image_url,is_active,created_at")
+    .select("id,name,description,price_cents,stripe_price_id,image_url,product_type,size_options,is_active,created_at")
     .maybeSingle();
 
   if (error || !updated) {
@@ -451,6 +475,8 @@ function withLegacyFallback(product: ProductRecord): ProductWithDetails {
 
   return {
     ...product,
+    product_type: normalizeProductType(product.product_type),
+    size_options: normalizeSizeOptions(product.size_options, normalizeProductType(product.product_type)),
     images: fallbackImages,
     colors: [],
   };
@@ -509,6 +535,8 @@ async function hydrateProductsWithDetails(products: ProductRecord[]): Promise<Pr
 
     return {
       ...product,
+      product_type: normalizeProductType(product.product_type),
+      size_options: normalizeSizeOptions(product.size_options, normalizeProductType(product.product_type)),
       images,
       colors,
     };

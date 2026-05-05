@@ -8,6 +8,7 @@ import FileDropField from "@/components/admin/FileDropField";
 import TogglePanel from "@/components/admin/TogglePanel";
 import { formatUtcIsoInPacific, utcIsoToPacificDateTimeInput } from "@/lib/pacificTime";
 import { slugifyTitle } from "@/lib/slugify";
+import type { SocialLink } from "@/lib/socialLinks";
 
 type PortableTextChild = { text?: string };
 type PortableTextBlock = { children?: PortableTextChild[] };
@@ -139,6 +140,15 @@ type CarouselFormState = {
   imageUrl: string;
 };
 
+type SocialLinkFormState = {
+  id: string;
+  label: string;
+  url: string;
+  iconUrl: string;
+  sortOrder: string;
+  isActive: boolean;
+};
+
 const EMPTY_ALBUM_FORM: AlbumFormState = {
   id: "",
   title: "",
@@ -154,21 +164,58 @@ const EMPTY_CAROUSEL_FORM: CarouselFormState = {
   imageUrl: "",
 };
 
+const EMPTY_SOCIAL_LINK_FORM: SocialLinkFormState = {
+  id: "",
+  label: "",
+  url: "",
+  iconUrl: "",
+  sortOrder: "",
+  isActive: true,
+};
+
+type ApiErrorPayload = {
+  error?: unknown;
+  message?: unknown;
+  code?: unknown;
+  details?: unknown;
+  hint?: unknown;
+};
+
+function getApiErrorText(payload: ApiErrorPayload, fallback: string) {
+  const toText = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+  const error = toText(payload.error) || fallback;
+  const message = toText(payload.message);
+  const code = toText(payload.code);
+  const details = toText(payload.details);
+  const hint = toText(payload.hint);
+
+  let text = error;
+  if (message && message !== error) text += `: ${message}`;
+  if (code) text += ` [${code}]`;
+  if (details && details !== message) text += ` Details: ${details}`;
+  if (hint) text += ` Hint: ${hint}`;
+
+  return text;
+}
+
 export default function ControlCenterPanels({
   events,
   officers,
   albums,
   carousel,
+  socialLinks,
 }: {
   events: EventSummary[];
   officers: OfficerSummary[];
   albums: AlbumSummary[];
   carousel: CarouselSummary[];
+  socialLinks: SocialLink[];
 }) {
   const router = useRouter();
   const [selectedEventId, setSelectedEventId] = useState<string>(events[0]?.id ?? "new");
   const [selectedAlbumId, setSelectedAlbumId] = useState<string>(albums[0]?.id ?? "new");
   const [selectedSlideId, setSelectedSlideId] = useState<string>(carousel[0]?.id ?? "new");
+  const [selectedSocialId, setSelectedSocialId] = useState<string>(socialLinks[0]?.id ?? "new");
   const [eventForm, setEventForm] = useState<EventFormState>(
     events[0]
       ? {
@@ -240,6 +287,22 @@ export default function ControlCenterPanels({
   const [deletingCarousel, setDeletingCarousel] = useState(false);
   const [carouselImageFile, setCarouselImageFile] = useState<File | null>(null);
   const [carouselImageRemote, setCarouselImageRemote] = useState<string | null>(null);
+  const [socialForm, setSocialForm] = useState<SocialLinkFormState>(
+    socialLinks[0]
+      ? {
+          id: socialLinks[0].id,
+          label: socialLinks[0].label ?? "",
+          url: socialLinks[0].url ?? "",
+          iconUrl: socialLinks[0].icon_url ?? "",
+          sortOrder: socialLinks[0].sort_order != null ? String(socialLinks[0].sort_order) : "",
+          isActive: socialLinks[0].is_active !== false,
+        }
+      : EMPTY_SOCIAL_LINK_FORM
+  );
+  const [savingSocial, setSavingSocial] = useState(false);
+  const [deletingSocial, setDeletingSocial] = useState(false);
+  const [socialIconFile, setSocialIconFile] = useState<File | null>(null);
+  const [socialIconRemote, setSocialIconRemote] = useState<string | null>(socialLinks[0]?.icon_url ?? null);
 
   useEffect(() => {
     if (selectedOfficerId !== "new" && !officers.some((o) => o.id === selectedOfficerId)) {
@@ -258,6 +321,12 @@ export default function ControlCenterPanels({
       setSelectedSlideId(carousel[0]?.id ?? "new");
     }
   }, [carousel, selectedSlideId]);
+
+  useEffect(() => {
+    if (selectedSocialId !== "new" && !socialLinks.some((link) => link.id === selectedSocialId)) {
+      setSelectedSocialId(socialLinks[0]?.id ?? "new");
+    }
+  }, [socialLinks, selectedSocialId]);
 
   useEffect(() => {
     const selected = events.find((evt) => evt.id === selectedEventId);
@@ -367,6 +436,29 @@ export default function ControlCenterPanels({
     }
   }, [selectedSlideId, carousel]);
 
+  useEffect(() => {
+    const selected = socialLinks.find((link) => link.id === selectedSocialId);
+    if (selected) {
+      setSocialForm({
+        id: selected.id,
+        label: selected.label ?? "",
+        url: selected.url ?? "",
+        iconUrl: selected.icon_url ?? "",
+        sortOrder: selected.sort_order != null ? String(selected.sort_order) : "",
+        isActive: selected.is_active !== false,
+      });
+      setSocialIconFile(null);
+      setSocialIconRemote(selected.icon_url ?? null);
+      return;
+    }
+
+    if (selectedSocialId === "new") {
+      setSocialForm({ ...EMPTY_SOCIAL_LINK_FORM });
+      setSocialIconFile(null);
+      setSocialIconRemote(null);
+    }
+  }, [selectedSocialId, socialLinks]);
+
   const uploadImage = async (file: File, folder: string) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -375,9 +467,84 @@ export default function ControlCenterPanels({
     const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.error || "Image upload failed");
+      throw new Error(getApiErrorText(data, "Image upload failed"));
     }
     return data.publicUrl as string;
+  };
+
+  const handleSocialSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSavingSocial(true);
+
+    const sortOrderNumber =
+      socialForm.sortOrder.trim() === "" ? null : Number(socialForm.sortOrder.trim());
+    const parsedSortOrder = Number.isFinite(sortOrderNumber) ? sortOrderNumber : null;
+
+    try {
+      let iconUrl = socialForm.iconUrl?.trim() || null;
+      if (socialIconRemote) iconUrl = socialIconRemote;
+      if (socialIconFile) {
+        iconUrl = await uploadImage(socialIconFile, "social-links");
+        setSocialIconFile(null);
+        setSocialIconRemote(iconUrl);
+      }
+
+      const res = await fetch("/api/admin/social-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: socialForm.id || undefined,
+          label: socialForm.label,
+          url: socialForm.url,
+          iconUrl,
+          sortOrder: parsedSortOrder,
+          isActive: socialForm.isActive,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(getApiErrorText(data, "Failed to save social link"));
+      }
+
+      toast.success(socialForm.id ? "Social link updated" : "Social link created");
+
+      if (data.link?.id) {
+        setSelectedSocialId(data.link.id as string);
+        setSocialForm((prev) => ({ ...prev, id: data.link.id as string, iconUrl: iconUrl ?? "" }));
+      }
+
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      toast.error((err as Error).message);
+    } finally {
+      setSavingSocial(false);
+    }
+  };
+
+  const handleSocialDelete = async () => {
+    if (!socialForm.id) return;
+    const confirm = window.confirm("Delete this social link? This removes it from the social bar.");
+    if (!confirm) return;
+    setDeletingSocial(true);
+    try {
+      const res = await fetch("/api/admin/social-links", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: socialForm.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(getApiErrorText(data, "Failed to delete social link"));
+      toast.success("Social link deleted");
+      setSelectedSocialId(socialLinks[0]?.id && socialLinks[0].id !== socialForm.id ? socialLinks[0].id : "new");
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      toast.error((err as Error).message);
+    } finally {
+      setDeletingSocial(false);
+    }
   };
 
   const handleEventSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -412,7 +579,7 @@ export default function ControlCenterPanels({
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || "Failed to save event");
+        throw new Error(getApiErrorText(data, "Failed to save event"));
       }
 
       toast.success(eventForm.id ? "Event updated" : "Event created");
@@ -443,7 +610,7 @@ export default function ControlCenterPanels({
         body: JSON.stringify({ id: eventForm.id }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to delete event");
+      if (!res.ok) throw new Error(getApiErrorText(data, "Failed to delete event"));
       toast.success("Event deleted");
       setSelectedEventId(events[0]?.id && events[0].id !== eventForm.id ? events[0].id : "new");
       router.refresh();
@@ -492,7 +659,7 @@ export default function ControlCenterPanels({
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || "Failed to save officer");
+        throw new Error(getApiErrorText(data, "Failed to save officer"));
       }
 
       toast.success(officerForm.id ? "Officer updated" : "Officer created");
@@ -523,7 +690,7 @@ export default function ControlCenterPanels({
         body: JSON.stringify({ id: officerForm.id }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to delete officer");
+      if (!res.ok) throw new Error(getApiErrorText(data, "Failed to delete officer"));
       toast.success("Officer deleted");
       setSelectedOfficerId(officers[0]?.id && officers[0].id !== officerForm.id ? officers[0].id : "new");
       router.refresh();
@@ -563,7 +730,7 @@ export default function ControlCenterPanels({
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || "Failed to save album");
+        throw new Error(getApiErrorText(data, "Failed to save album"));
       }
 
       toast.success(albumForm.id ? "Album updated" : "Album created");
@@ -594,7 +761,7 @@ export default function ControlCenterPanels({
         body: JSON.stringify({ id: albumForm.id }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to delete album");
+      if (!res.ok) throw new Error(getApiErrorText(data, "Failed to delete album"));
       toast.success("Album deleted");
       setSelectedAlbumId(albums[0]?.id && albums[0].id !== albumForm.id ? albums[0].id : "new");
       router.refresh();
@@ -636,7 +803,7 @@ export default function ControlCenterPanels({
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || "Failed to save slide");
+        throw new Error(getApiErrorText(data, "Failed to save slide"));
       }
 
       toast.success(carouselForm.id ? "Slide updated" : "Slide created");
@@ -667,7 +834,7 @@ export default function ControlCenterPanels({
         body: JSON.stringify({ id: carouselForm.id }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to delete slide");
+      if (!res.ok) throw new Error(getApiErrorText(data, "Failed to delete slide"));
       toast.success("Slide deleted");
       setSelectedSlideId(carousel[0]?.id && carousel[0].id !== carouselForm.id ? carousel[0].id : "new");
       router.refresh();
@@ -692,6 +859,7 @@ export default function ControlCenterPanels({
             <li><span className="text-white">Officers:</span> Update names, roles, ASU emails, socials, and headshots.</li>
             <li><span className="text-white">Gallery:</span> Link Google Photos albums, set dates, and upload cover images.</li>
             <li><span className="text-white">Home Carousel:</span> Set slide title/alt text, order, and hero images.</li>
+            <li><span className="text-white">Social Bar:</span> Edit global social links, optional custom thumbnails, and visibility.</li>
           </ul>
         </div>
       </div>
@@ -1398,6 +1566,202 @@ export default function ControlCenterPanels({
                 className="inline-flex items-center rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black transition hover:scale-[1.01] hover:bg-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {savingCarousel ? "Saving..." : carouselForm.id ? "Update slide" : "Create slide"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </TogglePanel>
+
+      <TogglePanel label="Social Bar">
+        <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-semibold text-white">Current links</p>
+            {socialLinks.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedSocialId("new")}
+                className="rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-white/40 hover:bg-white/15"
+              >
+                + New link
+              </button>
+            )}
+          </div>
+          {socialLinks.length === 0 ? (
+            <p className="mt-1 text-white/70">No social links yet.</p>
+          ) : (
+            <ul className="mt-2 divide-y divide-white/10 border-t border-white/10">
+              {socialLinks.map((link) => (
+                <li key={link.id} className="flex items-center justify-between gap-3 bg-white/5 px-3 py-2">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full border border-white/15 bg-amber-300/20 text-sm font-bold text-amber-100">
+                      {link.icon_url ? (
+                        <img src={link.icon_url} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        link.label.slice(0, 1).toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-white">{link.label}</p>
+                        {link.is_active === false && (
+                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/60">
+                            Hidden
+                          </span>
+                        )}
+                      </div>
+                      <p className="truncate text-xs text-white/70">{link.url}</p>
+                      <p className="text-[11px] text-white/55">
+                        {link.sort_order != null ? `Order ${link.sort_order}` : "No order set"}
+                        {link.icon_url ? " • custom thumbnail" : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSocialId(link.id)}
+                    className="rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-[12px] font-semibold text-white transition hover:border-amber-200/60 hover:bg-amber-400/10"
+                  >
+                    Edit
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <form id="social-links-form" className="flex flex-col gap-4" onSubmit={handleSocialSubmit}>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-white/70">
+              Editing
+              <select
+                className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-amber-200/70"
+                value={selectedSocialId}
+                onChange={(e) => setSelectedSocialId(e.target.value)}
+              >
+                <option value="new">Create new social link</option>
+                {socialLinks.map((link) => (
+                  <option key={link.id} value={link.id}>
+                    Edit: {link.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="text-xs text-white/60">
+              Recognized services use their normal icon automatically. Add a thumbnail only for custom links.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-2 text-sm text-white/80">
+              Label
+              <input
+                className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white outline-none focus:border-amber-200/70"
+                name="social_label"
+                placeholder="Instagram"
+                value={socialForm.label}
+                onChange={(e) => setSocialForm((prev) => ({ ...prev, label: e.target.value }))}
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-sm text-white/80">
+              Sort order (optional number)
+              <input
+                type="number"
+                className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white outline-none focus:border-amber-200/70"
+                name="social_sort"
+                placeholder="1 = first icon"
+                value={socialForm.sortOrder}
+                onChange={(e) => setSocialForm((prev) => ({ ...prev, sortOrder: e.target.value }))}
+              />
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-2 text-sm text-white/80">
+            Link URL
+            <input
+              className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white outline-none focus:border-amber-200/70"
+              name="social_url"
+              placeholder="https://instagram.com/asianstudentunion"
+              value={socialForm.url}
+              onChange={(e) => setSocialForm((prev) => ({ ...prev, url: e.target.value }))}
+              required
+            />
+          </label>
+
+          <label className="inline-flex items-center gap-2 text-sm text-white">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-white/30 bg-white/5 text-amber-300 focus:ring-amber-200"
+              checked={socialForm.isActive}
+              onChange={(e) => setSocialForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+            />
+            <span>Show this link in the social bar</span>
+          </label>
+
+          <label className="flex flex-col gap-2 text-sm text-white/80">
+            Icon thumbnail URL (optional)
+            <input
+              className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white outline-none focus:border-amber-200/70"
+              name="social_icon_url"
+              placeholder="https://..."
+              value={socialForm.iconUrl}
+              onChange={(e) => {
+                setSocialIconFile(null);
+                setSocialIconRemote(null);
+                setSocialForm((prev) => ({ ...prev, iconUrl: e.target.value }));
+              }}
+            />
+            <span className="text-xs text-white/60">
+              Leave blank for Instagram, TikTok, Discord, and other services supported by the icon library.
+            </span>
+          </label>
+
+          <FileDropField
+            label="Custom icon thumbnail"
+            name="social_icon"
+            helperText="Optional. Drag a square icon or click to upload."
+            initialPreview={socialForm.iconUrl || undefined}
+            onSelect={({ file, remoteUrl }) => {
+              setSocialIconFile(file ?? null);
+              setSocialIconRemote(remoteUrl ?? null);
+              setSocialForm((prev) => ({ ...prev, iconUrl: remoteUrl ?? prev.iconUrl }));
+            }}
+          />
+
+          {socialForm.iconUrl && (
+            <button
+              type="button"
+              onClick={() => {
+                setSocialIconFile(null);
+                setSocialIconRemote(null);
+                setSocialForm((prev) => ({ ...prev, iconUrl: "" }));
+              }}
+              className="w-fit rounded-md border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:border-red-300/60 hover:bg-red-500/10 hover:text-red-100"
+            >
+              Clear thumbnail
+            </button>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-white/60">
+              {socialForm.id ? "Updating existing social link" : "Creating a new social link"}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {socialForm.id && (
+                <button
+                  type="button"
+                  onClick={handleSocialDelete}
+                  disabled={deletingSocial}
+                  className="inline-flex items-center rounded-lg border border-red-400/70 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-300 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {deletingSocial ? "Deleting..." : "Delete"}
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={savingSocial || !socialForm.label.trim() || !socialForm.url.trim()}
+                className="inline-flex items-center rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black transition hover:scale-[1.01] hover:bg-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {savingSocial ? "Saving..." : socialForm.id ? "Update social link" : "Create social link"}
               </button>
             </div>
           </div>

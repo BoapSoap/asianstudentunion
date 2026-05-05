@@ -4,13 +4,18 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import StoreProductGrid from "@/components/store/StoreProductGrid";
 import GradientText from "@/components/store/GradientText";
 import CurvedLoop from "@/components/store/CurvedLoop";
-import type { ProductRow } from "@/lib/store";
+import {
+  isMissingProductCatalogColumnsError,
+  normalizeProductType,
+  normalizeSizeOptions,
+  type ProductRow,
+} from "@/lib/store";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
 export default async function StorePage() {
-  const [settingsResult, productsResult] = await Promise.all([
+  const [settingsResult, initialProductsResult] = await Promise.all([
     supabaseAdmin
       .from("store_settings")
       .select("id,is_enabled")
@@ -19,10 +24,19 @@ export default async function StorePage() {
       .maybeSingle(),
     supabaseAdmin
       .from("products")
-      .select("id,name,description,price_cents,image_url,is_active,created_at")
+      .select("id,name,description,price_cents,image_url,product_type,size_options,is_active,created_at")
       .eq("is_active", true)
       .order("created_at", { ascending: false }),
   ]);
+
+  const productsResult =
+    initialProductsResult.error && isMissingProductCatalogColumnsError(initialProductsResult.error)
+      ? await supabaseAdmin
+          .from("products")
+          .select("id,name,description,price_cents,image_url,is_active,created_at")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+      : initialProductsResult;
 
   if (settingsResult.error) {
     console.error("Failed to load store settings", settingsResult.error);
@@ -77,7 +91,7 @@ export default async function StorePage() {
 
   const baseProducts = (productsResult.data ?? []) as Pick<
     ProductRow,
-    "id" | "name" | "description" | "price_cents" | "image_url" | "created_at"
+    "id" | "name" | "description" | "price_cents" | "image_url" | "product_type" | "size_options" | "created_at"
   >[];
   const productIds = baseProducts.map((product) => product.id);
 
@@ -132,16 +146,20 @@ export default async function StorePage() {
   }
 
   const products = baseProducts.map((product) => {
+    const productType = normalizeProductType(product.product_type);
+    const sizeOptions = normalizeSizeOptions(product.size_options, productType);
     const images = imagesByProduct.get(product.id) ?? [];
     const colors = colorsByProduct.get(product.id) ?? [];
     if (images.length > 0) {
-      return { ...product, images, colors };
+      return { ...product, product_type: productType, size_options: sizeOptions, images, colors };
     }
     if (!product.image_url) {
-      return { ...product, images: [], colors };
+      return { ...product, product_type: productType, size_options: sizeOptions, images: [], colors };
     }
     return {
       ...product,
+      product_type: productType,
+      size_options: sizeOptions,
       colors,
       images: [
         {
