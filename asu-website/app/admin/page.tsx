@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Box, Button, Chip, Paper, Stack, Typography } from "@mui/material";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import { Alert, Box, Button, Chip, Paper, Stack, Typography } from "@mui/material";
 import ControlCenterPanels from "@/components/admin/ControlCenterPanels";
 import AdminLogsPanel from "@/components/admin/AdminLogsPanel";
 import { getCurrentProfile, type ProfileRole } from "@/lib/getCurrentProfile";
@@ -10,6 +11,12 @@ import OwnerActions from "@/components/admin/OwnerActions";
 import AdminTransferPanel from "@/components/admin/AdminTransferPanel";
 import type { AdminActivityLogRecord } from "@/lib/adminActivity";
 import type { SocialLink } from "@/lib/socialLinks";
+import DomainRenewalWarning from "@/components/admin/DomainRenewalWarning";
+import {
+  ADMIN_DOCUMENTATION_URL,
+  canSeeDomainRenewalNotice,
+  getDomainRenewalNoticeState,
+} from "@/lib/domainRenewalNotice";
 
 type PortableTextChild = { text?: string };
 type PortableTextBlock = { _key?: string; children?: PortableTextChild[] };
@@ -121,6 +128,102 @@ function DashboardHeader({ role }: { role: ProfileRole }) {
   );
 }
 
+function AdminDocumentationPanel() {
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        borderRadius: 3,
+        borderColor: "rgba(253, 230, 138, 0.34)",
+        bgcolor: "rgba(245, 158, 11, 0.12)",
+        p: 3,
+      }}
+    >
+      <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
+        <Box>
+          <Typography variant="overline" sx={{ color: "rgba(253, 230, 138, 0.94)", fontWeight: 700, letterSpacing: "0.08em" }}>
+            Documentation
+          </Typography>
+          <Typography variant="h5" sx={{ color: "#fff", fontWeight: 800 }}>
+            Website Operations Guide
+          </Typography>
+          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.72)", mt: 0.5 }}>
+            Reference instructions for using the site, running admin workflows, and handling operational tasks.
+          </Typography>
+        </Box>
+        <Button
+          component="a"
+          href={ADMIN_DOCUMENTATION_URL}
+          target="_blank"
+          rel="noreferrer"
+          variant="contained"
+          endIcon={<OpenInNewIcon />}
+          sx={{
+            alignSelf: { xs: "flex-start", md: "center" },
+            borderRadius: 2,
+            textTransform: "none",
+            fontWeight: 800,
+            bgcolor: "#fbbf24",
+            color: "#111827",
+            "&:hover": { bgcolor: "#fde047" },
+          }}
+        >
+          Open Documentation
+        </Button>
+      </Stack>
+    </Paper>
+  );
+}
+
+function DomainRenewalReminderPanel({
+  alertStartDate,
+  renewalDate,
+}: {
+  alertStartDate: string;
+  renewalDate: string;
+}) {
+  return (
+    <Alert
+      severity="warning"
+      action={
+        <Button
+          component="a"
+          href={ADMIN_DOCUMENTATION_URL}
+          target="_blank"
+          rel="noreferrer"
+          size="small"
+          endIcon={<OpenInNewIcon />}
+          sx={{
+            color: "#111827",
+            fontWeight: 800,
+            textTransform: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Open Docs
+        </Button>
+      }
+      sx={{
+        alignItems: "center",
+        borderRadius: 3,
+        border: "1px solid rgba(253, 230, 138, 0.45)",
+        bgcolor: "rgba(245, 158, 11, 0.14)",
+        color: "#fef3c7",
+        "& .MuiAlert-icon": { color: "#fbbf24" },
+        "& .MuiAlert-message": { width: "100%" },
+      }}
+    >
+      <Typography variant="subtitle2" sx={{ color: "#fff", fontWeight: 900 }}>
+        Domain renewal reminder
+      </Typography>
+      <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.78)", mt: 0.2 }}>
+        The renewal window is active from {alertStartDate} through {renewalDate}. Confirm domain auto-renewal,
+        billing, and account access in the operations documentation.
+      </Typography>
+    </Alert>
+  );
+}
+
 export default async function AdminPage() {
   const { user, profile } = await getCurrentProfile();
 
@@ -157,6 +260,8 @@ export default async function AdminPage() {
   const isAdmin = profile.role === "admin" || profile.role === "owner";
   const isOwner = profile.role === "owner";
   const isAdminOnly = profile.role === "admin";
+  const domainRenewalNotice = getDomainRenewalNoticeState();
+  const shouldCheckDomainRenewalNotice = canSeeDomainRenewalNotice(profile.role);
 
   type AdminEvent = {
     id: string;
@@ -209,6 +314,7 @@ export default async function AdminPage() {
     { data: carouselData, error: carouselError },
     { data: socialLinksData, error: socialLinksError },
     { data: activityLogsData, error: activityLogsError },
+    { data: domainRenewalAckData, error: domainRenewalAckError },
   ] = await Promise.all([
     supabaseAdmin
       .from("events")
@@ -243,6 +349,13 @@ export default async function AdminPage() {
           .order("created_at", { ascending: false })
           .limit(25)
       : Promise.resolve({ data: [] as AdminActivityLogRecord[], error: null }),
+    shouldCheckDomainRenewalNotice
+      ? supabaseAdmin
+          .from("admin_notice_acknowledgements")
+          .select("notice_key")
+          .eq("notice_key", domainRenewalNotice.noticeKey)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   if (eventsError) console.error("Failed to load events for admin", eventsError);
@@ -251,6 +364,7 @@ export default async function AdminPage() {
   if (carouselError) console.error("Failed to load carousel images for admin", carouselError);
   if (socialLinksError) console.error("Failed to load social links for admin", socialLinksError);
   if (activityLogsError) console.error("Failed to load admin activity logs", activityLogsError);
+  if (domainRenewalAckError) console.error("Failed to load domain renewal notice acknowledgement", domainRenewalAckError);
 
   const events: AdminEvent[] = eventsData ?? [];
   const officers: AdminOfficer[] = officersData ?? [];
@@ -258,9 +372,11 @@ export default async function AdminPage() {
   const carousel: AdminCarousel[] = carouselData ?? [];
   const socialLinks: SocialLink[] = (socialLinksData as SocialLink[] | null) ?? [];
   const activityLogs: AdminActivityLogRecord[] = (activityLogsData as AdminActivityLogRecord[] | null) ?? [];
+  const domainRenewalAcknowledged = Boolean(domainRenewalAckData);
 
   return (
     <Box component="main" sx={{ minHeight: "100vh", display: "flex", justifyContent: "center", pb: { xs: 12, md: 16 }, pt: "clamp(12rem, 18vh, 20rem)" }}>
+      <DomainRenewalWarning role={profile.role} initialAcknowledged={domainRenewalAcknowledged} />
       <Stack spacing={5} sx={{ width: "100%", maxWidth: 1200, px: 2 }}>
         <Paper
           variant="outlined"
@@ -274,6 +390,13 @@ export default async function AdminPage() {
         >
           <DashboardHeader role={profile.role} />
         </Paper>
+
+        {shouldCheckDomainRenewalNotice && domainRenewalNotice.isInWindow && (
+          <DomainRenewalReminderPanel
+            alertStartDate={domainRenewalNotice.alertStartDateLabel}
+            renewalDate={domainRenewalNotice.renewalDateLabel}
+          />
+        )}
 
         <ControlCenterPanels events={events} officers={officers} albums={albums} carousel={carousel} socialLinks={socialLinks} />
 
@@ -391,6 +514,8 @@ export default async function AdminPage() {
             </Stack>
           </Paper>
         )}
+
+        <AdminDocumentationPanel />
       </Stack>
     </Box>
   );
