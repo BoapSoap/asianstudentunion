@@ -30,6 +30,10 @@ export type ProductColorRow = {
   created_at: string;
 };
 
+export type StoreProductType = "clothing" | "general";
+
+export const DEFAULT_CLOTHING_SIZE_OPTIONS = ["S", "M", "L", "XL", "2XL"];
+
 export type ProductRow = {
   id: string;
   name: string;
@@ -37,6 +41,8 @@ export type ProductRow = {
   price_cents: number;
   stripe_price_id: string;
   image_url: string | null;
+  product_type?: StoreProductType | string | null;
+  size_options?: string[] | null;
   images?: ProductImageRow[];
   colors?: ProductColorRow[];
   is_active: boolean;
@@ -89,6 +95,41 @@ export function sanitizeQuantity(input: unknown): number | null {
   }
 
   return parsed;
+}
+
+export function normalizeProductType(value: string | null | undefined): StoreProductType {
+  return value === "general" ? "general" : "clothing";
+}
+
+export function normalizeSizeOptions(value: unknown, productType: StoreProductType = "clothing") {
+  if (productType === "general") {
+    return [];
+  }
+
+  const source = Array.isArray(value) ? value : DEFAULT_CLOTHING_SIZE_OPTIONS;
+  const next: string[] = [];
+  const seen = new Set<string>();
+
+  for (const option of source) {
+    const normalized = String(option ?? "").trim().slice(0, 24);
+    const key = normalized.toLowerCase();
+    if (!normalized || seen.has(key)) continue;
+    seen.add(key);
+    next.push(normalized);
+  }
+
+  return next.length > 0 ? next : DEFAULT_CLOTHING_SIZE_OPTIONS;
+}
+
+export function isMissingProductCatalogColumnsError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: string; message?: string };
+  const message = candidate.message?.toLowerCase() ?? "";
+  return (
+    candidate.code === "PGRST204" ||
+    message.includes("product_type") ||
+    message.includes("size_options")
+  );
 }
 
 export function getBaseSiteUrl(request?: Request) {

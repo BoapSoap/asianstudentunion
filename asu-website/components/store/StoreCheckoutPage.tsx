@@ -16,7 +16,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { formatUsdFromCents } from "@/lib/store";
+import { formatUsdFromCents, normalizeProductType, type StoreProductType } from "@/lib/store";
 import { readStoreCartItems, writeStoreCartItems } from "@/lib/storeCart";
 
 type CartItem = {
@@ -25,7 +25,9 @@ type CartItem = {
   name: string;
   priceCents: number;
   imageUrl: string;
-  size: string;
+  productType?: StoreProductType;
+  size: string | null;
+  sizeOptions?: string[];
   colorId: string | null;
   colorName: string | null;
   colorHex: string | null;
@@ -75,10 +77,12 @@ function isCartItem(value: unknown): value is CartItem {
     typeof item.key === "string" &&
     typeof item.productId === "string" &&
     typeof item.name === "string" &&
-    typeof item.priceCents === "number" &&
-    Number.isFinite(item.priceCents) &&
+      typeof item.priceCents === "number" &&
+      Number.isFinite(item.priceCents) &&
       typeof item.imageUrl === "string" &&
-      typeof item.size === "string" &&
+      (typeof item.productType === "string" || typeof item.productType === "undefined") &&
+      (typeof item.size === "string" || item.size === null || typeof item.size === "undefined") &&
+      (Array.isArray(item.sizeOptions) || typeof item.sizeOptions === "undefined") &&
       (typeof item.colorId === "string" || item.colorId === null || typeof item.colorId === "undefined") &&
       (typeof item.colorName === "string" || item.colorName === null || typeof item.colorName === "undefined") &&
       (typeof item.colorHex === "string" || item.colorHex === null || typeof item.colorHex === "undefined") &&
@@ -103,6 +107,8 @@ export default function StoreCheckoutPage() {
       .filter(isCartItem)
       .map((item) => ({
         ...item,
+        productType: normalizeProductType(item.productType),
+        size: typeof item.size === "string" && item.size.trim() ? item.size.trim() : null,
         colorId: item.colorId ?? null,
         colorName: item.colorName ?? null,
         colorHex: item.colorHex ?? null,
@@ -227,7 +233,7 @@ export default function StoreCheckoutPage() {
           items: cartItems.map((item) => ({
             product_id: item.productId,
             quantity: item.quantity,
-            size: item.size,
+            size: item.size ?? null,
             color_id: item.colorId,
           })),
         }),
@@ -551,12 +557,14 @@ export default function StoreCheckoutPage() {
                     />
                     <Box>
                       <Typography sx={{ color: "white", fontWeight: 700, lineHeight: 1.2 }}>{item.name}</Typography>
-                      <Typography sx={{ mt: 0.6, color: "rgba(255,255,255,0.72)", fontSize: "0.78rem" }}>Size: {item.size}</Typography>
-                      <Stack direction="row" spacing={0.7} alignItems="center" sx={{ mt: 0.35 }}>
-                        <Typography sx={{ color: "rgba(255,255,255,0.72)", fontSize: "0.78rem" }}>
-                          Color: {item.colorName || "—"}
-                        </Typography>
-                        {item.colorName && (
+                      {item.size && (
+                        <Typography sx={{ mt: 0.6, color: "rgba(255,255,255,0.72)", fontSize: "0.78rem" }}>Size: {item.size}</Typography>
+                      )}
+                      {item.colorName && (
+                        <Stack direction="row" spacing={0.7} alignItems="center" sx={{ mt: 0.35 }}>
+                          <Typography sx={{ color: "rgba(255,255,255,0.72)", fontSize: "0.78rem" }}>
+                            Color: {item.colorName}
+                          </Typography>
                           <Box
                             sx={{
                               width: 11,
@@ -566,8 +574,8 @@ export default function StoreCheckoutPage() {
                               backgroundColor: item.colorHex || "#ffffff",
                             }}
                           />
-                        )}
-                      </Stack>
+                        </Stack>
+                      )}
                       <Typography sx={{ color: "rgba(255,255,255,0.72)", fontSize: "0.78rem" }}>Qty: {item.quantity}</Typography>
                       <Typography sx={{ mt: 0.6, color: "#fde68a", fontWeight: 800, fontSize: "0.95rem" }}>
                         {formatUsdFromCents(item.priceCents * item.quantity)}

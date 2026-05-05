@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { Box, IconButton } from "@mui/material";
 import { SocialIcon } from "react-social-icons";
+import { DEFAULT_SOCIAL_LINKS, type SocialLink, type SocialLinksResponse } from "@/lib/socialLinks";
 
 export default function SocialBar() {
     const [mounted, setMounted] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [open, setOpen] = useState(false);
+    const [links, setLinks] = useState<SocialLink[] | null>(null);
 
     // Prevent hydration mismatch
     useEffect(() => {
@@ -26,8 +28,90 @@ export default function SocialBar() {
         return () => window.removeEventListener("resize", checkMobile);
     }, [mounted]);
 
+    useEffect(() => {
+        if (!mounted) return;
+
+        let cancelled = false;
+
+        const loadSocialLinks = async () => {
+            try {
+                const response = await fetch("/api/social-links", { cache: "no-store" });
+                const payload = (await response.json()) as SocialLinksResponse;
+
+                if (!cancelled && response.ok && Array.isArray(payload.links)) {
+                    setLinks(payload.links);
+                }
+            } catch (error) {
+                console.error("Failed to load social links", error);
+                if (!cancelled) {
+                    setLinks(DEFAULT_SOCIAL_LINKS);
+                }
+            }
+        };
+
+        loadSocialLinks();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [mounted]);
+
     // 🚫 Don't render ANYTHING until mounted (fixes hydration mismatch)
     if (!mounted) return null;
+    if (!links || links.length === 0) return null;
+
+    const renderSocialLink = (link: SocialLink) => (
+        <Box
+            key={link.id}
+            sx={{
+                transition: "transform 0.25s ease",
+                "&:hover": {
+                    transform: isMobile ? "scale(1.18)" : "scale(1.15)",
+                },
+            }}
+        >
+            {link.icon_url ? (
+                <Box
+                    component="a"
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={link.label}
+                    sx={{
+                        width: 40,
+                        height: 40,
+                        display: "grid",
+                        placeItems: "center",
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        bgcolor: "var(--accent-color)",
+                        boxShadow: "0 3px 10px rgba(0,0,0,0.2)",
+                    }}
+                >
+                    <Box
+                        component="img"
+                        src={link.icon_url}
+                        alt=""
+                        sx={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                        }}
+                    />
+                </Box>
+            ) : (
+                <SocialIcon
+                    url={link.url}
+                    label={link.label}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    bgColor="var(--accent-color)"
+                    fgColor="var(--primary-color)"
+                    style={{ width: 40, height: 40 }}
+                />
+            )}
+        </Box>
+    );
 
     // -----------------------
     // Desktop Social Bar
@@ -50,29 +134,7 @@ export default function SocialBar() {
                     zIndex: 2000,
                 }}
             >
-                {[
-                    "https://www.instagram.com/asianstudentunion/",
-                    "https://www.tiktok.com/@sfsuasianstudentunion",
-                    "https://discord.com/invite/m485CGmEWr",
-                ].map((url, i) => (
-                    <Box
-                        key={i}
-                        sx={{
-                            transition: "transform 0.25s ease",
-                            "&:hover": {
-                                transform: "scale(1.15)",
-                            },
-                        }}
-                    >
-                        <SocialIcon
-                            url={url}
-                            target="_blank"
-                            bgColor="var(--accent-color)"
-                            fgColor="var(--primary-color)"
-                            style={{ width: 40, height: 40 }}
-                        />
-                    </Box>
-                ))}
+                {links.map(renderSocialLink)}
             </Box>
         );
     }
@@ -109,29 +171,7 @@ export default function SocialBar() {
                         transition: "all 0.25s ease",
                     }}
                 >
-                    {[
-                        "https://www.instagram.com/asianstudentunion/",
-                        "https://www.tiktok.com/@sfsuasianstudentunion",
-                        "https://discord.com/invite/m485CGmEWr",
-                    ].map((url, i) => (
-                        <Box
-                            key={i}
-                            sx={{
-                                transition: "transform 0.25s ease",
-                                "&:hover": {
-                                    transform: "scale(1.18)",
-                                },
-                            }}
-                        >
-                            <SocialIcon
-                                url={url}
-                                target="_blank"
-                                bgColor="var(--accent-color)"
-                                fgColor="var(--primary-color)"
-                                style={{ width: 40, height: 40 }}
-                            />
-                        </Box>
-                    ))}
+                    {links.map(renderSocialLink)}
                 </Box>
             )}
 

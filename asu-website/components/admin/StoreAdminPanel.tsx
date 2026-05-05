@@ -47,7 +47,13 @@ import {
   DEFAULT_PAID_REMINDER_HOURS,
   isReminderDue,
 } from "@/lib/storeReminders";
-import { formatUsdFromCents } from "@/lib/store";
+import {
+  DEFAULT_CLOTHING_SIZE_OPTIONS,
+  formatUsdFromCents,
+  normalizeProductType,
+  normalizeSizeOptions,
+  type StoreProductType,
+} from "@/lib/store";
 
 type StoreSettings = {
   id: string | null;
@@ -76,6 +82,8 @@ type StoreProduct = {
   price_cents: number;
   stripe_price_id: string;
   image_url: string | null;
+  product_type: StoreProductType | string | null;
+  size_options: string[] | null;
   images: StoreProductImage[];
   colors: StoreProductColor[];
   is_active: boolean;
@@ -131,6 +139,8 @@ type ProductFormState = {
   name: string;
   description: string;
   priceDollars: string;
+  productType: StoreProductType;
+  sizeOptionsText: string;
   isActive: boolean;
 };
 
@@ -154,6 +164,8 @@ const EMPTY_PRODUCT_FORM: ProductFormState = {
   name: "",
   description: "",
   priceDollars: "",
+  productType: "clothing",
+  sizeOptionsText: DEFAULT_CLOTHING_SIZE_OPTIONS.join(", "),
   isActive: true,
 };
 const DEFAULT_PICKUP_INSTRUCTIONS = "Pickup in ASU room.";
@@ -267,6 +279,22 @@ function dedupeUrls(urls: string[]) {
     next.push(trimmed);
   }
   return next;
+}
+
+function sizeOptionsToText(value: unknown, productType: StoreProductType | string | null | undefined) {
+  const normalizedType = normalizeProductType(productType);
+  return normalizeSizeOptions(value, normalizedType).join(", ");
+}
+
+function parseSizeOptionsInput(value: string, productType: StoreProductType) {
+  if (productType === "general") return [];
+
+  const options = value
+    .split(/[\n,]/)
+    .map((option) => option.trim().slice(0, 24))
+    .filter(Boolean);
+
+  return normalizeSizeOptions(options, productType);
 }
 
 function buildExistingDrafts(product: StoreProduct): ProductImageDraft[] {
@@ -396,6 +424,8 @@ export default function StoreAdminPanel({
       name: productsState[0].name,
       description: productsState[0].description ?? "",
       priceDollars: centsToDollarInput(productsState[0].price_cents),
+      productType: normalizeProductType(productsState[0].product_type),
+      sizeOptionsText: sizeOptionsToText(productsState[0].size_options, productsState[0].product_type),
       isActive: productsState[0].is_active,
     };
   });
@@ -490,6 +520,8 @@ export default function StoreAdminPanel({
       name: selected.name,
       description: selected.description ?? "",
       priceDollars: centsToDollarInput(selected.price_cents),
+      productType: normalizeProductType(selected.product_type),
+      sizeOptionsText: sizeOptionsToText(selected.size_options, selected.product_type),
       isActive: selected.is_active,
     });
     const nextDrafts = buildExistingDrafts(selected);
@@ -704,6 +736,12 @@ export default function StoreAdminPanel({
         throw new Error("Price must be a valid dollar amount, for example 25.00 or 25.99");
       }
 
+      const productType = normalizeProductType(productForm.productType);
+      const sizeOptions = parseSizeOptionsInput(productForm.sizeOptionsText, productType);
+      if (productType === "clothing" && sizeOptions.length === 0) {
+        throw new Error("Clothing items need at least one size option.");
+      }
+
       const imageUrlsRaw: string[] = [];
       const resolvedImageUrlByPreview = new Map<string, string>();
       for (const draft of productImageDrafts) {
@@ -758,6 +796,8 @@ export default function StoreAdminPanel({
           name: productForm.name,
           description: productForm.description,
           price_cents: priceCents,
+          product_type: productType,
+          size_options: sizeOptions,
           image_urls: imageUrls,
           thumbnail_index: thumbnailIndex,
           colors: colorPayload,
@@ -1540,10 +1580,10 @@ export default function StoreAdminPanel({
                 Products
               </Typography>
               <Typography variant="h6" sx={{ color: "white", fontWeight: 800, mt: 0.2 }}>
-                Merch Catalog
+                Store Catalog
               </Typography>
               <Typography sx={{ color: "rgba(255,255,255,0.72)", mt: 0.45 }}>
-                Create, edit, activate/deactivate, and archive products.
+                Create clothing, lanyards, tickets, and other store items.
               </Typography>
             </Box>
           </AccordionSummary>
@@ -1581,6 +1621,14 @@ export default function StoreAdminPanel({
                     <TableCell>
                       <Typography sx={{ color: "white", fontWeight: 700 }}>{product.name}</Typography>
                       <Typography sx={{ color: "rgba(255,255,255,0.62)", fontSize: "0.78rem" }}>{product.description || "No description"}</Typography>
+                      <Typography sx={{ color: "rgba(255,255,255,0.58)", fontSize: "0.74rem", mt: 0.35 }}>
+                        Type: {normalizeProductType(product.product_type) === "general" ? "General item" : "Clothing"}
+                      </Typography>
+                      {normalizeProductType(product.product_type) === "clothing" && (
+                        <Typography sx={{ color: "rgba(255,255,255,0.55)", fontSize: "0.74rem", mt: 0.15 }}>
+                          Sizes: {normalizeSizeOptions(product.size_options, "clothing").join(", ")}
+                        </Typography>
+                      )}
                       <Typography sx={{ color: "rgba(255,255,255,0.55)", fontSize: "0.74rem", mt: 0.35 }}>
                         Images: {product.images.length > 0 ? product.images.length : product.image_url ? 1 : 0}
                       </Typography>
@@ -1683,6 +1731,61 @@ export default function StoreAdminPanel({
                   fullWidth
                   sx={fieldSx}
                 />
+                <Stack direction={{ xs: "column", md: "row" }} spacing={1.2}>
+                  <FormControl fullWidth sx={fieldSx}>
+                    <InputLabel id="product-type-label">Item type</InputLabel>
+                    <Select
+                      labelId="product-type-label"
+                      label="Item type"
+                      value={productForm.productType}
+                      onChange={(event) => {
+                        const productType = normalizeProductType(String(event.target.value));
+                        setProductForm((prev) => ({
+                          ...prev,
+                          productType,
+                          sizeOptionsText:
+                            productType === "clothing"
+                              ? prev.sizeOptionsText || DEFAULT_CLOTHING_SIZE_OPTIONS.join(", ")
+                              : "",
+                        }));
+                      }}
+                    >
+                      <MenuItem value="clothing">Clothing merch</MenuItem>
+                      <MenuItem value="general">General item</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  {productForm.productType === "clothing" ? (
+                    <TextField
+                      label="Available sizes"
+                      value={productForm.sizeOptionsText}
+                      onChange={(event) =>
+                        setProductForm((prev) => ({ ...prev, sizeOptionsText: event.target.value }))
+                      }
+                      helperText="Separate sizes with commas, for example XS, S, M, L, XL."
+                      fullWidth
+                      sx={fieldSx}
+                    />
+                  ) : (
+                    <Paper
+                      sx={{
+                        flex: 1,
+                        borderRadius: 2,
+                        border: "1px solid rgba(255,255,255,0.14)",
+                        background: "rgba(255,255,255,0.05)",
+                        px: 1.6,
+                        py: 1.25,
+                      }}
+                    >
+                      <Typography sx={{ color: "rgba(255,255,255,0.86)", fontWeight: 700 }}>
+                        No size selector
+                      </Typography>
+                      <Typography sx={{ color: "rgba(255,255,255,0.62)", fontSize: "0.82rem", mt: 0.3 }}>
+                        Use this for lanyards, tickets, stickers, or other items sold by quantity.
+                      </Typography>
+                    </Paper>
+                  )}
+                </Stack>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2} alignItems={{ sm: "center" }}>
                   <Button component="label" variant="outlined" sx={{ borderColor: "rgba(255,255,255,0.3)", color: "white" }}>
                     Upload Images

@@ -21,6 +21,34 @@ type EventPayload = {
 
 const EDIT_ROLES: ProfileRole[] = ["editor", "admin", "owner"];
 
+type SupabaseErrorShape = {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+};
+
+function supabaseErrorResponse(fallback: string, error: unknown, status = 500) {
+  const dbError = (error ?? {}) as SupabaseErrorShape;
+  const message = typeof dbError.message === "string" && dbError.message.trim()
+    ? dbError.message
+    : fallback;
+  const code = typeof dbError.code === "string" && dbError.code.trim() ? dbError.code : undefined;
+  const details = typeof dbError.details === "string" && dbError.details.trim() ? dbError.details : undefined;
+  const hint = typeof dbError.hint === "string" && dbError.hint.trim() ? dbError.hint : undefined;
+
+  return NextResponse.json(
+    {
+      error: fallback,
+      message,
+      code,
+      details,
+      hint,
+    },
+    { status: code === "23505" ? 409 : status }
+  );
+}
+
 function buildDescriptionBlocks(raw?: string | null) {
   const text = raw?.trim();
   if (!text) return null;
@@ -172,7 +200,7 @@ export async function POST(request: Request) {
     link,
     description,
     image_url: imageUrl,
-    featured,
+    featured: false,
     slug,
   };
 
@@ -189,7 +217,7 @@ export async function POST(request: Request) {
 
     if (updateError || !updated) {
       console.error("Failed to update event", updateError);
-      return NextResponse.json({ error: "Update failed" }, { status: 500 });
+      return supabaseErrorResponse("Update failed", updateError);
     }
 
     savedId = updated.id;
@@ -203,7 +231,7 @@ export async function POST(request: Request) {
 
     if (insertError || !inserted) {
       console.error("Failed to create event", insertError);
-      return NextResponse.json({ error: "Create failed" }, { status: 500 });
+      return supabaseErrorResponse("Create failed", insertError);
     }
 
     savedId = inserted.id;
@@ -218,7 +246,22 @@ export async function POST(request: Request) {
 
     if (unfeatureError) {
       console.error("Failed to unfeature other events", unfeatureError);
+      return supabaseErrorResponse("Failed to clear previous featured event", unfeatureError);
     }
+
+    const { data: featuredEvent, error: featureError } = await supabaseAdmin
+      .from("events")
+      .update({ featured: true })
+      .eq("id", savedId)
+      .select("id, slug")
+      .maybeSingle();
+
+    if (featureError || !featuredEvent) {
+      console.error("Failed to feature event", featureError);
+      return supabaseErrorResponse("Failed to feature event", featureError);
+    }
+
+    savedSlug = featuredEvent.slug ?? savedSlug;
   }
 
   await logAdminActivity({

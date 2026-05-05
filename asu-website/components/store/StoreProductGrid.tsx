@@ -15,18 +15,18 @@ import {
   IconButton,
   MenuItem,
   Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Tooltip,
   Typography,
 } from "@mui/material";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
-import { formatUsdFromCents } from "@/lib/store";
+import {
+  DEFAULT_CLOTHING_SIZE_OPTIONS,
+  formatUsdFromCents,
+  normalizeProductType,
+  normalizeSizeOptions,
+  type StoreProductType,
+} from "@/lib/store";
 import {
   STORE_CART_OPEN_EVENT,
   STORE_CART_OPEN_SESSION_KEY,
@@ -40,6 +40,8 @@ type StoreProduct = {
   description: string | null;
   price_cents: number;
   image_url: string | null;
+  product_type?: StoreProductType | string | null;
+  size_options?: string[] | null;
   images?: StoreProductImage[];
   colors?: StoreProductColor[];
 };
@@ -66,7 +68,9 @@ type CartItem = {
   name: string;
   priceCents: number;
   imageUrl: string;
-  size: string;
+  productType?: StoreProductType;
+  size: string | null;
+  sizeOptions?: string[];
   colorId: string | null;
   colorName: string | null;
   colorHex: string | null;
@@ -80,10 +84,12 @@ function isCartItem(value: unknown): value is CartItem {
     typeof item.key === "string" &&
     typeof item.productId === "string" &&
     typeof item.name === "string" &&
-    typeof item.priceCents === "number" &&
-    Number.isFinite(item.priceCents) &&
+      typeof item.priceCents === "number" &&
+      Number.isFinite(item.priceCents) &&
       typeof item.imageUrl === "string" &&
-      typeof item.size === "string" &&
+      (typeof item.productType === "string" || typeof item.productType === "undefined") &&
+      (typeof item.size === "string" || item.size === null || typeof item.size === "undefined") &&
+      (Array.isArray(item.sizeOptions) || typeof item.sizeOptions === "undefined") &&
       (typeof item.colorId === "string" || item.colorId === null || typeof item.colorId === "undefined") &&
       (typeof item.colorName === "string" || item.colorName === null || typeof item.colorName === "undefined") &&
       (typeof item.colorHex === "string" || item.colorHex === null || typeof item.colorHex === "undefined") &&
@@ -91,16 +97,6 @@ function isCartItem(value: unknown): value is CartItem {
       Number.isFinite(item.quantity)
   );
 }
-
-const SIZE_OPTIONS = ["S", "M", "L", "XL", "2XL"];
-
-const SIZE_GUIDE_ROWS = [
-  { size: "S", length: "26.38", shoulder: "19.68", chest: "20.87", sleeveLength: "7.09" },
-  { size: "M", length: "27.17", shoulder: "20.47", chest: "21.65", sleeveLength: "7.48" },
-  { size: "L", length: "27.95", shoulder: "21.26", chest: "22.44", sleeveLength: "7.87" },
-  { size: "XL", length: "28.74", shoulder: "22.05", chest: "23.23", sleeveLength: "8.27" },
-  { size: "2XL", length: "29.53", shoulder: "22.83", chest: "24.02", sleeveLength: "8.66" },
-];
 
 const FALLBACK_CARD_IMAGE = `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
@@ -121,10 +117,6 @@ function clampQuantity(value: number) {
   return Math.min(99, Math.max(1, Math.trunc(value)));
 }
 
-function normalizeSize(value: string) {
-  return SIZE_OPTIONS.includes(value) ? value : "M";
-}
-
 function uniqueUrls(urls: string[]) {
   const next: string[] = [];
   const seen = new Set<string>();
@@ -134,6 +126,21 @@ function uniqueUrls(urls: string[]) {
     next.push(value);
   }
   return next;
+}
+
+function getProductSizeOptions(product: StoreProduct | null) {
+  if (!product) return [];
+  return normalizeSizeOptions(product.size_options, normalizeProductType(product.product_type));
+}
+
+function getDefaultSize(product: StoreProduct | null) {
+  return getProductSizeOptions(product)[0] ?? null;
+}
+
+function getCartItemSizeOptions(item: CartItem) {
+  const productType = normalizeProductType(item.productType);
+  if (productType === "general" && !item.size) return [];
+  return normalizeSizeOptions(item.sizeOptions ?? DEFAULT_CLOTHING_SIZE_OPTIONS, productType);
 }
 
 function getProductImages(product: StoreProduct) {
@@ -196,7 +203,9 @@ export default function StoreProductGrid({
       .filter(isCartItem)
       .map((item) => ({
         ...item,
-        size: normalizeSize(item.size),
+        productType: normalizeProductType(item.productType),
+        size: typeof item.size === "string" && item.size.trim() ? item.size.trim() : null,
+        sizeOptions: normalizeSizeOptions(item.sizeOptions, normalizeProductType(item.productType)),
         colorId: item.colorId ?? null,
         colorName: item.colorName ?? null,
         colorHex: item.colorHex ?? null,
@@ -205,11 +214,10 @@ export default function StoreProductGrid({
   });
 
   const [optionsOpen, setOptionsOpen] = useState(false);
-  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState("M");
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColorId, setSelectedColorId] = useState<string | null>(null);
   const [hoveredProductId, setHoveredProductId] = useState<string | null>(null);
   const [previewColorByProduct, setPreviewColorByProduct] = useState<Record<string, string | null>>({});
@@ -229,7 +237,7 @@ export default function StoreProductGrid({
     setSelectedProduct(product);
     setSelectedImageIndex(0);
     setSelectedQuantity(1);
-    setSelectedSize("M");
+    setSelectedSize(getDefaultSize(product));
     setSelectedColorId(defaultColorId);
     setOptionsOpen(true);
   };
@@ -247,6 +255,7 @@ export default function StoreProductGrid({
     Math.max(selectedImages.length - 1, 0)
   );
   const selectedPreviewImage = selectedImages[selectedActiveImageIndex] || FALLBACK_CARD_IMAGE;
+  const selectedSizeOptions = getProductSizeOptions(selectedProduct);
 
   useEffect(() => {
     const handleOpenCart = () => setCartOpen(true);
@@ -272,7 +281,10 @@ export default function StoreProductGrid({
     const quantity = clampQuantity(selectedQuantity);
     const imageUrl = selectedPreviewImage || FALLBACK_CARD_IMAGE;
     const color = getColorById(selectedProduct, selectedColorId);
-    const matchKey = `${selectedProduct.id}:${selectedSize}:${color?.id ?? "no-color"}`;
+    const productType = normalizeProductType(selectedProduct.product_type);
+    const sizeOptions = getProductSizeOptions(selectedProduct);
+    const size = sizeOptions.length > 0 && selectedSize ? selectedSize : null;
+    const matchKey = `${selectedProduct.id}:${size ?? "no-size"}:${color?.id ?? "no-color"}`;
 
     setCartItems((prev) => {
       const existing = prev.find((item) => item.key === matchKey);
@@ -294,7 +306,9 @@ export default function StoreProductGrid({
           name: selectedProduct.name,
           priceCents: selectedProduct.price_cents,
           imageUrl,
-          size: selectedSize,
+          productType,
+          size,
+          sizeOptions,
           colorId: color?.id ?? null,
           colorName: color?.name ?? null,
           colorHex: color?.hex_color ?? null,
@@ -317,6 +331,7 @@ export default function StoreProductGrid({
     setCartItems((prev) => {
       const current = prev.find((item) => item.key === key);
       if (!current) return prev;
+      if (!getCartItemSizeOptions(current).includes(nextSize)) return prev;
       if (current.size === nextSize) return prev;
 
       const nextKey = `${current.productId}:${nextSize}:${current.colorId ?? "no-color"}`;
@@ -565,28 +580,30 @@ export default function StoreProductGrid({
             )}
           </Box>
 
-          <Box sx={{ display: "grid", gap: 0.6 }}>
-            <Typography sx={{ fontSize: "0.84rem", color: "rgba(255,255,255,0.75)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>
-              Size
-            </Typography>
-            <Select
-              value={selectedSize}
-              onChange={(event) => setSelectedSize(String(event.target.value))}
-              size="small"
-              sx={{
-                color: "white",
-                borderRadius: "10px",
-                ".MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.25)" },
-                "& .MuiSvgIcon-root": { color: "#ffe48f" },
-              }}
-            >
-              {SIZE_OPTIONS.map((size) => (
-                <MenuItem key={size} value={size}>
-                  {size}
-                </MenuItem>
-              ))}
-            </Select>
-          </Box>
+          {selectedSizeOptions.length > 0 && (
+            <Box sx={{ display: "grid", gap: 0.6 }}>
+              <Typography sx={{ fontSize: "0.84rem", color: "rgba(255,255,255,0.75)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>
+                Size
+              </Typography>
+              <Select
+                value={selectedSize ?? selectedSizeOptions[0]}
+                onChange={(event) => setSelectedSize(String(event.target.value))}
+                size="small"
+                sx={{
+                  color: "white",
+                  borderRadius: "10px",
+                  ".MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.25)" },
+                  "& .MuiSvgIcon-root": { color: "#ffe48f" },
+                }}
+              >
+                {selectedSizeOptions.map((size) => (
+                  <MenuItem key={size} value={size}>
+                    {size}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Box>
+          )}
 
           {selectedProduct && getActiveProductColors(selectedProduct).length > 0 && (
             <Box sx={{ display: "grid", gap: 0.6 }}>
@@ -719,64 +736,6 @@ export default function StoreProductGrid({
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={sizeGuideOpen}
-        onClose={() => setSizeGuideOpen(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: "16px",
-            border: "1px solid rgba(255,255,255,0.22)",
-            background: "rgba(45,8,8,0.94)",
-            color: "white",
-            backdropFilter: "blur(10px)",
-          },
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 800, color: "#ffe48f" }}>Size Guide</DialogTitle>
-        <DialogContent>
-          <Typography sx={{ color: "rgba(255,255,255,0.75)", fontSize: "0.86rem", mb: 1.2 }}>
-            Measurements shown in inches.
-          </Typography>
-          <TableContainer
-            sx={{
-              borderRadius: 2,
-              border: "1px solid rgba(255,255,255,0.2)",
-              background: "rgba(255,255,255,0.08)",
-            }}
-          >
-            <Table size="small">
-              <TableHead sx={{ background: "rgba(255,255,255,0.1)" }}>
-                <TableRow>
-                  <TableCell sx={{ color: "white", fontWeight: 800 }}>Size</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: 800 }}>Length</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: 800 }}>Shoulder</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: 800 }}>Chest</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: 800 }}>Sleeve length</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {SIZE_GUIDE_ROWS.map((row) => (
-                  <TableRow key={row.size} sx={{ "& td": { borderColor: "rgba(255,255,255,0.14)" } }}>
-                    <TableCell sx={{ color: "white", fontWeight: 700 }}>{row.size}</TableCell>
-                    <TableCell sx={{ color: "rgba(255,255,255,0.88)" }}>{row.length}</TableCell>
-                    <TableCell sx={{ color: "rgba(255,255,255,0.88)" }}>{row.shoulder}</TableCell>
-                    <TableCell sx={{ color: "rgba(255,255,255,0.88)" }}>{row.chest}</TableCell>
-                    <TableCell sx={{ color: "rgba(255,255,255,0.88)" }}>{row.sleeveLength}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.2 }}>
-          <Button onClick={() => setSizeGuideOpen(false)} sx={{ color: "rgba(255,255,255,0.82)", fontWeight: 700 }}>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       <Drawer
         anchor="right"
         open={cartOpen}
@@ -795,24 +754,6 @@ export default function StoreProductGrid({
         <Typography sx={{ color: "rgba(255,255,255,0.78)", fontSize: "0.92rem", mb: 1.4 }}>
           Review options, then continue to checkout.
         </Typography>
-        <Button
-          type="button"
-          variant="outlined"
-          onClick={() => setSizeGuideOpen(true)}
-          sx={{
-            alignSelf: "flex-start",
-            mb: 1.3,
-            borderRadius: "999px",
-            borderColor: "rgba(255,255,255,0.28)",
-            color: "white",
-            textTransform: "none",
-            fontWeight: 700,
-            "&:hover": { borderColor: "rgba(255,255,255,0.42)", bgcolor: "rgba(255,255,255,0.08)" },
-          }}
-        >
-          Size Guide
-        </Button>
-
         <Divider sx={{ borderColor: "rgba(255,255,255,0.16)", mb: 1.4 }} />
 
         {cartItems.length === 0 ? (
@@ -830,6 +771,7 @@ export default function StoreProductGrid({
         ) : (
           <Box sx={{ display: "grid", gap: 1.2 }}>
             {cartItems.map((item) => {
+              const itemSizeOptions = getCartItemSizeOptions(item);
               return (
                 <Box
                   key={item.key}
@@ -877,25 +819,27 @@ export default function StoreProductGrid({
                     </Box>
                   </Box>
 
-                  <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0.8 }}>
-                    <Select
-                      value={item.size}
-                      size="small"
-                      onChange={(event) => updateCartSize(item.key, String(event.target.value))}
-                      sx={{
-                        color: "white",
-                        borderRadius: "10px",
-                        background: "rgba(0,0,0,0.22)",
-                        ".MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.25)" },
-                        "& .MuiSvgIcon-root": { color: "#ffe48f" },
-                      }}
-                    >
-                      {SIZE_OPTIONS.map((size) => (
-                        <MenuItem key={size} value={size}>
-                          {size}
-                        </MenuItem>
-                      ))}
-                    </Select>
+                  <Box sx={{ display: "grid", gridTemplateColumns: itemSizeOptions.length > 0 ? "1fr 1fr" : "1fr", gap: 0.8 }}>
+                    {itemSizeOptions.length > 0 && (
+                      <Select
+                        value={item.size ?? itemSizeOptions[0]}
+                        size="small"
+                        onChange={(event) => updateCartSize(item.key, String(event.target.value))}
+                        sx={{
+                          color: "white",
+                          borderRadius: "10px",
+                          background: "rgba(0,0,0,0.22)",
+                          ".MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.25)" },
+                          "& .MuiSvgIcon-root": { color: "#ffe48f" },
+                        }}
+                      >
+                        {itemSizeOptions.map((size) => (
+                          <MenuItem key={size} value={size}>
+                            {size}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    )}
 
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                       <button
