@@ -289,6 +289,8 @@ export default async function AdminPage() {
     linkedin: string | null;
     major?: string | null;
     year?: string | null;
+    is_current?: boolean | null;
+    term_label?: string | null;
   };
 
   type AdminAlbum = {
@@ -323,7 +325,8 @@ export default async function AdminPage() {
       .order("date", { ascending: true }),
     supabaseAdmin
       .from("officers")
-      .select("id,name,role,sort_order,bio,image_url,email,instagram,linkedin,major,year")
+      .select("id,name,role,sort_order,bio,image_url,email,instagram,linkedin,major,year,is_current,term_label")
+      .eq("is_current", true)
       .order("sort_order", { ascending: true, nullsFirst: true })
       .order("role", { ascending: true })
       .order("name", { ascending: true }),
@@ -398,7 +401,14 @@ export default async function AdminPage() {
           />
         )}
 
-        <ControlCenterPanels events={events} officers={officers} albums={albums} carousel={carousel} socialLinks={socialLinks} />
+        <ControlCenterPanels
+          events={events}
+          officers={officers}
+          albums={albums}
+          carousel={carousel}
+          socialLinks={socialLinks}
+          canArchiveOfficers={isAdmin}
+        />
 
         <Paper
           variant="outlined"

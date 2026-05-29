@@ -1,6 +1,7 @@
 // app/officers/page.tsx
 import { Box, Typography } from "@mui/material";
 import { supabase } from "../../lib/supabaseClient";
+import ArchivedOfficerSections from "./ArchivedOfficerSections";
 import OfficerGrid from "./OfficerGrid";
 
 export const revalidate = 0;
@@ -18,6 +19,9 @@ type OfficerRow = {
     email: string | null;
     instagram: string | null;
     linkedin: string | null;
+    is_current: boolean | null;
+    term_label: string | null;
+    archived_at: string | null;
 };
 
 type Officer = {
@@ -34,19 +38,13 @@ type Officer = {
     linkedin?: string;
 };
 
-export default async function OfficersPage() {
-    const { data: officerRows, error } = await supabase
-        .from("officers")
-        .select("*")
-        .order("sort_order", { ascending: true, nullsFirst: true })
-        .order("role", { ascending: true })
-        .order("name", { ascending: true });
+type ArchivedOfficerTerm = {
+    label: string;
+    officers: Officer[];
+};
 
-    if (error) {
-        console.error("Failed to load officers", error);
-    }
-
-    const officers: Officer[] = (officerRows ?? []).map((row: OfficerRow) => ({
+function toOfficer(row: OfficerRow): Officer {
+    return {
         _id: row.id,
         name: row.name,
         role: row.role,
@@ -58,7 +56,47 @@ export default async function OfficersPage() {
         email: row.email ?? undefined,
         instagram: row.instagram ?? undefined,
         linkedin: row.linkedin ?? undefined,
-    }));
+    };
+}
+
+function getTermStartYear(label: string) {
+    const match = label.match(/^(\d{4})/);
+    return match ? Number(match[1]) : 0;
+}
+
+export default async function OfficersPage() {
+    const { data: officerRows, error } = await supabase
+        .from("officers")
+        .select("*")
+        .order("is_current", { ascending: false })
+        .order("term_label", { ascending: false, nullsFirst: false })
+        .order("sort_order", { ascending: true, nullsFirst: true })
+        .order("role", { ascending: true })
+        .order("name", { ascending: true });
+
+    if (error) {
+        console.error("Failed to load officers", error);
+    }
+
+    const currentOfficers: Officer[] = [];
+    const archiveMap = new Map<string, Officer[]>();
+
+    for (const row of (officerRows ?? []) as OfficerRow[]) {
+        const officer = toOfficer(row);
+        if (row.is_current !== false) {
+            currentOfficers.push(officer);
+            continue;
+        }
+
+        const termLabel = row.term_label?.trim() || "Archived Core";
+        const termOfficers = archiveMap.get(termLabel) ?? [];
+        termOfficers.push(officer);
+        archiveMap.set(termLabel, termOfficers);
+    }
+
+    const archivedTerms: ArchivedOfficerTerm[] = Array.from(archiveMap.entries())
+        .map(([label, officers]) => ({ label, officers }))
+        .sort((a, b) => getTermStartYear(b.label) - getTermStartYear(a.label));
 
     return (
         <Box
@@ -101,14 +139,15 @@ export default async function OfficersPage() {
                     a second home.
                 </Typography>
 
-                {officers.length === 0 ? (
+                {currentOfficers.length === 0 ? (
                     <Typography sx={{ color: "#ddd", textAlign: "center" }}>
-                        No officers added yet. Add some &quot;officer&quot; documents in
-                        Sanity Studio to show them here.
+                        No current officers added yet. Check back soon for the latest core.
                     </Typography>
                 ) : (
-                    <OfficerGrid officers={officers} />
+                    <OfficerGrid officers={currentOfficers} />
                 )}
+
+                <ArchivedOfficerSections archivedTerms={archivedTerms} />
             </Box>
         </Box>
     );

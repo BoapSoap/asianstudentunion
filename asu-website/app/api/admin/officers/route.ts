@@ -77,6 +77,9 @@ export async function POST(request: Request) {
     major: body.major?.trim() || null,
     year: body.year?.trim() || null,
     image_url: body.imageUrl?.trim() || null,
+    is_current: true,
+    term_label: null,
+    archived_at: null,
     sort_order:
       typeof body.sortOrder === "number" && Number.isFinite(body.sortOrder) ? body.sortOrder : null,
   };
@@ -97,6 +100,7 @@ export async function POST(request: Request) {
       .from("officers")
       .select("id,name,role,email,sort_order")
       .eq("id", body.id)
+      .eq("is_current", true)
       .maybeSingle();
 
     if (existingError) {
@@ -204,9 +208,14 @@ export async function DELETE(request: Request) {
     .from("officers")
     .select("id,name")
     .eq("id", id)
+    .eq("is_current", true)
     .maybeSingle();
 
-  const { error: deleteError } = await supabaseAdmin.from("officers").delete().eq("id", id);
+  const { error: deleteError } = await supabaseAdmin
+    .from("officers")
+    .delete()
+    .eq("id", id)
+    .eq("is_current", true);
   if (deleteError) {
     console.error("Failed to delete officer", deleteError);
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
