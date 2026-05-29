@@ -80,6 +80,8 @@ type OfficerSummary = {
   linkedin: string | null;
   major?: string | null;
   year?: string | null;
+  is_current?: boolean | null;
+  term_label?: string | null;
 };
 
 type OfficerFormState = {
@@ -204,12 +206,14 @@ export default function ControlCenterPanels({
   albums,
   carousel,
   socialLinks,
+  canArchiveOfficers = false,
 }: {
   events: EventSummary[];
   officers: OfficerSummary[];
   albums: AlbumSummary[];
   carousel: CarouselSummary[];
   socialLinks: SocialLink[];
+  canArchiveOfficers?: boolean;
 }) {
   const router = useRouter();
   const [selectedEventId, setSelectedEventId] = useState<string>(events[0]?.id ?? "new");
@@ -267,6 +271,10 @@ export default function ControlCenterPanels({
   );
   const [savingOfficer, setSavingOfficer] = useState(false);
   const [deletingOfficer, setDeletingOfficer] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [archiveTerm, setArchiveTerm] = useState("");
+  const [archiveUnderstood, setArchiveUnderstood] = useState(false);
+  const [archivingOfficers, setArchivingOfficers] = useState(false);
   const [officerImageFile, setOfficerImageFile] = useState<File | null>(null);
   const [officerImageRemote, setOfficerImageRemote] = useState<string | null>(null);
   const [savingAlbum, setSavingAlbum] = useState(false);
@@ -702,6 +710,37 @@ export default function ControlCenterPanels({
     }
   };
 
+  const handleArchiveOfficers = async () => {
+    const termLabel = archiveTerm.trim();
+    if (!termLabel || !archiveUnderstood) return;
+
+    setArchivingOfficers(true);
+    try {
+      const res = await fetch("/api/admin/officers/archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ termLabel, understood: archiveUnderstood }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(getApiErrorText(data, "Failed to archive current core"));
+      }
+
+      toast.success(`Archived ${data.archived ?? officers.length} officers as ${data.termLabel ?? termLabel}`);
+      setArchiveDialogOpen(false);
+      setArchiveTerm("");
+      setArchiveUnderstood(false);
+      setSelectedOfficerId("new");
+      setOfficerForm({ ...EMPTY_OFFICER_FORM });
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      toast.error((err as Error).message);
+    } finally {
+      setArchivingOfficers(false);
+    }
+  };
+
   const handleAlbumSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSavingAlbum(true);
@@ -1074,20 +1113,36 @@ export default function ControlCenterPanels({
 
       <TogglePanel label="Manage Officers">
         <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
-          <div className="flex items-center justify-between gap-3">
-            <p className="font-semibold text-white">Current officers</p>
-            {officers.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setSelectedOfficerId("new")}
-                className="rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-white/40 hover:bg-white/15"
-              >
-                + New officer
-              </button>
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-white">Current officers</p>
+              <p className="text-xs text-white/60">
+                These are shown as the latest core on the public Officers page.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {canArchiveOfficers && officers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setArchiveDialogOpen(true)}
+                  className="rounded-md border border-red-300/60 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-100 transition hover:border-red-200 hover:bg-red-500/25"
+                >
+                  Archive Current Core
+                </button>
+              )}
+              {officers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedOfficerId("new")}
+                  className="rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-white/40 hover:bg-white/15"
+                >
+                  + New officer
+                </button>
+              )}
+            </div>
           </div>
           {officers.length === 0 ? (
-            <p className="mt-1 text-white/70">No officers yet.</p>
+            <p className="mt-3 text-white/70">No current officers yet.</p>
           ) : (
             <ul className="mt-2 divide-y divide-white/10 border-t border-white/10">
               {officers.map((officer) => (
@@ -1117,6 +1172,80 @@ export default function ControlCenterPanels({
             </ul>
           )}
         </div>
+        {archiveDialogOpen && (
+          <div className="fixed inset-0 z-[1300] grid place-items-center bg-black/70 px-4 py-8">
+            <div className="w-full max-w-xl rounded-xl border border-red-300/40 bg-[#220406] p-5 text-white shadow-2xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-red-200">
+                    Admin archive action
+                  </p>
+                  <h3 className="mt-1 text-xl font-black text-white">Archive Current Core</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!archivingOfficers) setArchiveDialogOpen(false);
+                  }}
+                  className="rounded-md border border-white/15 px-2.5 py-1 text-sm font-semibold text-white/75 hover:bg-white/10"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-4 rounded-lg border border-red-300/30 bg-red-950/45 p-4">
+                <p className="font-bold text-red-100">Read this before continuing.</p>
+                <p className="mt-2 text-sm leading-6 text-red-50/85">
+                  This will move every current officer into the archive and clear the current officers section.
+                  They will no longer appear as the latest core. The archived group will show below the latest core
+                  on the public Officers page. Only do this when you are ready to add the next core.
+                </p>
+              </div>
+
+              <label className="mt-4 flex flex-col gap-2 text-sm text-white/80">
+                Archive school year
+                <input
+                  className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white outline-none focus:border-red-200/80"
+                  placeholder="2025-2026"
+                  value={archiveTerm}
+                  onChange={(e) => setArchiveTerm(e.target.value)}
+                  disabled={archivingOfficers}
+                />
+                <span className="text-xs text-white/55">Use the format 2025-2026. The site will save it as 2025-2026 Core.</span>
+              </label>
+
+              <label className="mt-4 flex items-start gap-3 rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/85">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-white/30 bg-white/10 text-red-300 focus:ring-red-200"
+                  checked={archiveUnderstood}
+                  onChange={(e) => setArchiveUnderstood(e.target.checked)}
+                  disabled={archivingOfficers}
+                />
+                <span>I understand this will archive and clear the current core.</span>
+              </label>
+
+              <div className="mt-5 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setArchiveDialogOpen(false)}
+                  disabled={archivingOfficers}
+                  className="rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleArchiveOfficers}
+                  disabled={archivingOfficers || !archiveTerm.trim() || !archiveUnderstood}
+                  className="rounded-lg bg-red-300 px-4 py-2 text-sm font-black text-red-950 transition hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {archivingOfficers ? "Archiving..." : "Archive and Clear Current Core"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <form id="officers-form" className="flex flex-col gap-4" onSubmit={handleOfficerSubmit}>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-white/70">
